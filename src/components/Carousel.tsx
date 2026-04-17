@@ -121,6 +121,8 @@ export const Carousel = () => {
               <button 
                 onClick={() => setShowShareModal(false)}
                 className="absolute top-4 right-4 text-text-dim hover:text-white transition-colors"
+                title="Cerrar"
+                aria-label="Cerrar"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -166,12 +168,16 @@ export const Carousel = () => {
       {/* Controls */}
       <button
         onClick={prevSlide}
+        title="Anterior"
+        aria-label="Anterior"
         className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-panel/50 border border-border text-white hover:bg-accent hover:text-black transition-all z-20"
       >
         <ChevronLeft className="w-6 h-6" />
       </button>
       <button
         onClick={nextSlide}
+        title="Siguiente"
+        aria-label="Siguiente"
         className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-panel/50 border border-border text-white hover:bg-accent hover:text-black transition-all z-20"
       >
         <ChevronRight className="w-6 h-6" />
@@ -183,6 +189,8 @@ export const Carousel = () => {
           <button
             key={index}
             onClick={() => setCurrentIndex(index)}
+            title={`Ir al slide ${index + 1}`}
+            aria-label={`Ir al slide ${index + 1}`}
             className={`w-12 h-1 rounded-full transition-all ${
               index === currentIndex ? 'bg-accent' : 'bg-white/20'
             }`}

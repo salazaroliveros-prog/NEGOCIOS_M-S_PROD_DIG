@@ -289,10 +289,10 @@ export const ChatWidget = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setShowSettings(!showSettings)} className="text-black/60 hover:text-black transition-colors">
+                <button onClick={() => setShowSettings(!showSettings)} className="text-black/60 hover:text-black transition-colors" title="Ajustes" aria-label="Ajustes">
                   <Settings className="w-4 h-4" />
                 </button>
-                <button onClick={() => setIsOpen(false)} className="text-black/60 hover:text-black transition-colors">
+                <button onClick={() => setIsOpen(false)} className="text-black/60 hover:text-black transition-colors" title="Cerrar chat" aria-label="Cerrar chat">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -491,6 +491,8 @@ export const ChatWidget = () => {
                 <button
                   type="submit"
                   className="bg-accent text-black p-2 rounded-lg hover:bg-accent/90 transition-all"
+                  title="Enviar mensaje"
+                  aria-label="Enviar mensaje"
                 >
                   <Send className="w-4 h-4" />
                 </button>
