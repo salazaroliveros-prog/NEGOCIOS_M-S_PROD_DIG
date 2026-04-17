@@ -245,6 +245,7 @@ export const ProductsPage = () => {
                   className="text-text-dim hover:text-white transition-colors"
                   title="Cerrar detalles"
                   aria-label="Cerrar detalles"
+                >
                   <ExternalLink className="w-6 h-6 rotate-45" />
                 </button>
               </header>
