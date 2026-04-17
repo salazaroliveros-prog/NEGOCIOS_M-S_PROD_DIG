@@ -167,7 +167,9 @@ export const ServicesPage = () => {
           <div className="space-y-2">
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Nombre Completo</label>
             <input 
-              type="text" 
+              type="text"
+              title="Nombre Completo"
+              placeholder="Nombre Completo"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className={`w-full bg-input border rounded-lg py-4 px-6 text-white focus:ring-2 focus:ring-accent outline-none transition-all ${errors.name ? 'border-red-500' : 'border-border'}`} 
@@ -177,7 +179,9 @@ export const ServicesPage = () => {
           <div className="space-y-2">
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Correo Electrónico</label>
             <input 
-              type="email" 
+              type="email"
+              title="Correo Electrónico"
+              placeholder="Correo Electrónico"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className={`w-full bg-input border rounded-lg py-4 px-6 text-white focus:ring-2 focus:ring-accent outline-none transition-all ${errors.email ? 'border-red-500' : 'border-border'}`} 
@@ -188,6 +192,8 @@ export const ServicesPage = () => {
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Tipo de Edificación</label>
             <select 
               value={formData.type}
+              title="Tipo de Edificación"
+              aria-label="Tipo de Edificación"
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               className="w-full bg-input border border-border rounded-lg py-4 px-6 text-white focus:ring-2 focus:ring-accent outline-none"
             >
@@ -211,7 +217,9 @@ export const ServicesPage = () => {
           <div className="md:col-span-2 space-y-2">
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Plazo Deseado ({formData.duration} Meses)</label>
             <input 
-              type="range" 
+              type="range"
+              title="Plazo Deseado"
+              aria-label="Plazo Deseado"
               min="1" 
               max="24" 
               value={formData.duration}
@@ -227,7 +235,9 @@ export const ServicesPage = () => {
           <div className="md:col-span-2 space-y-2">
             <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Detalles del Proyecto</label>
             <textarea 
-              rows={4} 
+              rows={4}
+              title="Detalles del Proyecto"
+              placeholder="Describe tu proyecto..."
               value={formData.details}
               onChange={(e) => setFormData({ ...formData, details: e.target.value })}
               className={`w-full bg-input border rounded-lg py-4 px-6 text-white focus:ring-2 focus:ring-accent outline-none resize-none transition-all ${errors.details ? 'border-red-500' : 'border-border'}`}

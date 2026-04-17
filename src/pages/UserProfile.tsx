@@ -113,6 +113,8 @@ export const UserProfile = () => {
               />
               <button 
                 onClick={() => setShowAvatarEditor(!showAvatarEditor)}
+                title="Editar avatar"
+                aria-label="Editar avatar"
                 className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-all text-white"
               >
                 <Camera className="w-6 h-6" />
@@ -157,6 +159,10 @@ export const UserProfile = () => {
                     />
                     <button 
                       onClick={async () => {
+                        /* ...existing code... */
+                      }}
+                      title="Guardar avatar personalizado"
+                      aria-label="Guardar avatar personalizado"
                         if (customAvatarUrl) {
                           if (!validateImageUrl(customAvatarUrl)) {
                             alert('Por favor, ingresa una URL de imagen válida (.jpg, .png, .svg, etc.)');
@@ -216,6 +222,8 @@ export const UserProfile = () => {
                       <button 
                         onClick={() => deleteNotification(notif.id)}
                         className="text-text-dim hover:text-red-500 transition-colors"
+                        title="Eliminar notificación"
+                        aria-label="Eliminar notificación"
                       >
                         <LogOut className="w-3 h-3 rotate-90" />
                       </button>
