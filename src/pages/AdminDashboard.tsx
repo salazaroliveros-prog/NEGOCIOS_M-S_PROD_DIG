@@ -1,12 +1,12 @@
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  ShoppingBag, 
-  Users, 
-  Settings, 
-  FileText, 
-  Download, 
-  TrendingUp, 
+import {
+  LayoutDashboard,
+  ShoppingBag,
+  Users,
+  Settings,
+  FileText,
+  Download,
+  TrendingUp,
   ArrowUpRight,
   Package,
   CheckCircle2,
@@ -40,7 +40,6 @@ import {
   onSnapshot, 
   query, 
   orderBy, 
-  serverTimestamp, 
   addDoc,
   Timestamp,
   doc,
@@ -48,7 +47,8 @@ import {
   deleteDoc,
   setDoc,
   getDoc,
-  arrayUnion
+  arrayUnion,
+  serverTimestamp
 } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
@@ -111,16 +111,16 @@ export const AdminDashboard = () => {
 
   // Page Config State
   const [pageConfig, setPageConfig] = React.useState<any>({
-    heroTitle: 'INGENIERÍA QUE CONSTRUYE EL FUTURO',
+    heroTitle: 'ARQUITECTURA QUE CONSTRUYE EL FUTURO',
     heroSubtitle: 'Soluciones integrales en diseño, cálculo y ejecución de obras civiles con los más altos estándares de calidad.',
     heroImage: 'https://images.unsplash.com/photo-1541888946425-d81bb19480c5?auto=format&fit=crop&q=80',
     accentColor: '#EAB308',
     primaryColor: '#0A0A0A',
-    footerText: '© 2024 CONSTRUM&S. Todos los derechos reservados.',
-    contactEmail: 'info@construms.com',
-    contactPhone: '+502 1234 5678',
-    contactAddress: 'Ciudad de Guatemala, Guatemala',
-    bankAccountInfo: 'Banco Industrial - Cuenta Monetaria: 123-456789-0 - A nombre de: CONSTRUM&S S.A.'
+    footerText: '© 2025 CONSTRUM&S. Todos los derechos reservados.',
+    contactEmail: 'multiserviciosdeguatemal@gmail.com.com',
+    contactPhone: '+502 55606172',
+    contactAddress: 'QUESADA, JUTIAPA, Guatemala',
+    bankAccountInfo: 'Banco DE DESARROLLO RURRAL - Cuenta AHORRO: 4675040554- A nombre de: WILSON DARIO SALAZAR.'
   });
 
   // Products & Services State
@@ -942,7 +942,13 @@ export const AdminDashboard = () => {
                         <span className="text-accent">{channel.value}%</span>
                       </div>
                       <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                        <div className={`h-full ${channel.color}`} style={{ width: `${channel.value}%` }}></div>
+                        <div
+                          className={`h-full ${channel.color}`}
+                          style={{ width: `${channel.value}%` }}
+                          aria-label={`Progreso ${channel.label}`}
+                          title={`Progreso ${channel.label}: ${channel.value}%`}
+                          tabIndex={0}
+                        ></div>
                       </div>
                     </div>
                   ))}
@@ -1017,6 +1023,8 @@ export const AdminDashboard = () => {
                     </div>
                     <div className="flex gap-2">
                       <select 
+                        title="Asignar responsable del chat"
+                        aria-label="Asignar responsable del chat"
                         onChange={(e) => {
                           if (selectedChatId) {
                             updateDoc(doc(db, 'chats', selectedChatId), { assignedTo: e.target.value })
@@ -1157,6 +1165,8 @@ export const AdminDashboard = () => {
                               onClick={() => moveSection(index, 'up')}
                               className="text-text-dim hover:text-accent disabled:opacity-0"
                               disabled={index === 0}
+                              title="Subir sección"
+                              aria-label="Subir sección"
                             >
                               <Plus className="w-3 h-3 rotate-180" />
                             </button>
@@ -1164,6 +1174,8 @@ export const AdminDashboard = () => {
                               onClick={() => moveSection(index, 'down')}
                               className="text-text-dim hover:text-accent disabled:opacity-0"
                               disabled={index === landingSections.length - 1}
+                              title="Bajar sección"
+                              aria-label="Bajar sección"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
@@ -1177,6 +1189,8 @@ export const AdminDashboard = () => {
                           <button 
                             onClick={() => setEditingLandingSection(section)}
                             className={`p-2 rounded-lg transition-all ${editingLandingSection?.id === section.id ? 'text-accent bg-accent/20' : 'text-text-dim hover:text-white'}`}
+                            title="Editar sección"
+                            aria-label="Editar sección"
                           >
                             <Settings className="w-4 h-4" />
                           </button>
@@ -1187,6 +1201,8 @@ export const AdminDashboard = () => {
                               handleUpdateLandingSections(newSections);
                             }}
                             className={`p-2 rounded-lg transition-all ${section.visible ? 'text-accent bg-accent/10' : 'text-text-dim bg-white/5'}`}
+                            title={section.visible ? "Ocultar sección" : "Mostrar sección"}
+                            aria-label={section.visible ? "Ocultar sección" : "Mostrar sección"}
                           >
                             <CheckCircle2 className="w-4 h-4" />
                           </button>
@@ -1199,7 +1215,7 @@ export const AdminDashboard = () => {
                     <div className="mt-8 p-6 bg-bg border border-accent/30 rounded-xl animate-in fade-in slide-in-from-top-4">
                       <div className="flex justify-between items-center mb-6">
                         <h4 className="text-[10px] font-bold uppercase tracking-widest text-accent">Editando: {editingLandingSection.title}</h4>
-                        <button onClick={() => setEditingLandingSection(null)} className="text-text-dim hover:text-white">
+                        <button onClick={() => setEditingLandingSection(null)} className="text-text-dim hover:text-white" title="Cerrar edición" aria-label="Cerrar edición">
                           <XCircle className="w-4 h-4" />
                         </button>
                       </div>
@@ -1211,6 +1227,8 @@ export const AdminDashboard = () => {
                             value={editingLandingSection.title}
                             onChange={(e) => setEditingLandingSection({...editingLandingSection, title: e.target.value})}
                             className="w-full bg-input border border-border rounded-lg px-4 py-2 text-xs text-white outline-none focus:border-accent"
+                            title="Título de sección"
+                            placeholder="Título de la sección"
                           />
                         </div>
                         <div>
@@ -1219,6 +1237,8 @@ export const AdminDashboard = () => {
                             value={editingLandingSection.subtitle || ''}
                             onChange={(e) => setEditingLandingSection({...editingLandingSection, subtitle: e.target.value})}
                             className="w-full bg-input border border-border rounded-lg px-4 py-2 text-xs text-white outline-none focus:border-accent h-20"
+                            title="Subtítulo o descripción"
+                            placeholder="Subtítulo o descripción"
                           />
                         </div>
                         {editingLandingSection.image !== undefined && (
@@ -1229,6 +1249,8 @@ export const AdminDashboard = () => {
                               value={editingLandingSection.image}
                               onChange={(e) => setEditingLandingSection({...editingLandingSection, image: e.target.value})}
                               className="w-full bg-input border border-border rounded-lg px-4 py-2 text-xs text-white outline-none focus:border-accent"
+                              title="URL de imagen"
+                              placeholder="https://images.unsplash.com/..."
                             />
                           </div>
                         )}
@@ -1263,6 +1285,7 @@ export const AdminDashboard = () => {
                         ? setEditingProject({ ...editingProject, title: e.target.value })
                         : setNewProject({ ...newProject, title: e.target.value })}
                       className="w-full bg-input border border-border rounded-lg px-4 py-2 text-sm text-white focus:ring-1 focus:ring-accent outline-none"
+                      title="Título del proyecto"
                       placeholder="Ej: Residencial Las Luces"
                     />
                   </div>
@@ -1274,6 +1297,7 @@ export const AdminDashboard = () => {
                         ? setEditingProject({ ...editingProject, description: e.target.value })
                         : setNewProject({ ...newProject, description: e.target.value })}
                       className="w-full bg-input border border-border rounded-lg px-4 py-2 text-sm text-white focus:ring-1 focus:ring-accent outline-none h-24"
+                      title="Descripción del proyecto"
                       placeholder="Breve descripción del proyecto..."
                     />
                   </div>
@@ -1289,6 +1313,7 @@ export const AdminDashboard = () => {
                         (editingProject?.image || newProject.image) && !validateImageUrl(editingProject?.image || newProject.image) 
                         ? 'border-red-500' : 'border-border'
                       }`}
+                      title="URL de imagen"
                       placeholder="https://images.unsplash.com/..."
                     />
                     {(editingProject?.image || newProject.image) && (
@@ -1307,6 +1332,8 @@ export const AdminDashboard = () => {
                     <input
                       type="date"
                       value={editingProject ? editingProject.deliveryDate : newProject.deliveryDate}
+                      title="Fecha de Entrega Estimada"
+                      placeholder="Selecciona la fecha"
                       onChange={(e) => editingProject
                         ? setEditingProject({ ...editingProject, deliveryDate: e.target.value })
                         : setNewProject({ ...newProject, deliveryDate: e.target.value })}
@@ -1397,12 +1424,15 @@ export const AdminDashboard = () => {
                             proj.status === 'completed' ? 'bg-green-500 text-white' : 'bg-white/10 text-white hover:bg-green-500 hover:text-white'
                           }`}
                           title={proj.status === 'completed' ? 'Marcar como Activo' : 'Marcar como Completo'}
+                          aria-label={proj.status === 'completed' ? 'Marcar como Activo' : 'Marcar como Completo'}
                         >
                           <CheckCircle2 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => setEditingProject(proj)}
                           className="p-2 bg-accent text-black rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                          title="Editar proyecto"
+                          aria-label="Editar proyecto"
                         >
                           <Settings className="w-4 h-4" />
                         </button>
@@ -1411,6 +1441,8 @@ export const AdminDashboard = () => {
                           className={`p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${
                             projectToDelete === proj.id ? 'bg-red-600 text-white animate-pulse' : 'bg-red-500 text-white'
                           }`}
+                          title="Eliminar proyecto"
+                          aria-label="Eliminar proyecto"
                         >
                           {projectToDelete === proj.id ? <Check className="w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
                         </button>
@@ -1466,6 +1498,8 @@ export const AdminDashboard = () => {
                   <select
                     value={newTask.priority}
                     onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                    title="Prioridad de la tarea"
+                    aria-label="Prioridad de la tarea"
                     className="w-full bg-input border border-border rounded-lg px-4 py-2 text-sm text-white focus:ring-1 focus:ring-accent outline-none"
                   >
                     <option value="low">Baja</option>
@@ -1475,6 +1509,8 @@ export const AdminDashboard = () => {
                   <input
                     type="date"
                     value={newTask.dueDate}
+                    title="Fecha de entrega"
+                    placeholder="Selecciona la fecha"
                     onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
                     className="w-full bg-input border border-border rounded-lg px-4 py-2 text-sm text-white focus:ring-1 focus:ring-accent outline-none"
                   />
@@ -1520,6 +1556,8 @@ export const AdminDashboard = () => {
                               <button 
                                 onClick={() => updateTaskStatus(task.id, status === 'todo' ? 'in-progress' : 'done')}
                                 className="p-1 hover:bg-bg rounded text-accent"
+                                title={status === 'todo' ? 'Marcar en progreso' : 'Marcar como hecho'}
+                                aria-label={status === 'todo' ? 'Marcar en progreso' : 'Marcar como hecho'}
                               >
                                 <Check className="w-3 h-3" />
                               </button>
@@ -1576,6 +1614,8 @@ export const AdminDashboard = () => {
                     <input 
                       type="text" 
                       value={pageConfig.heroTitle}
+                      title="Título Principal (Hero)"
+                      placeholder="Título principal"
                       onChange={(e) => setPageConfig({ ...pageConfig, heroTitle: e.target.value })}
                       className="w-full bg-input border border-border rounded-lg px-4 py-3 text-sm text-white focus:ring-1 focus:ring-accent outline-none"
                     />
@@ -1585,6 +1625,8 @@ export const AdminDashboard = () => {
                     <textarea 
                       rows={3}
                       value={pageConfig.heroSubtitle}
+                      title="Subtítulo (Hero)"
+                      placeholder="Subtítulo principal"
                       onChange={(e) => setPageConfig({ ...pageConfig, heroSubtitle: e.target.value })}
                       className="w-full bg-input border border-border rounded-lg px-4 py-3 text-sm text-white focus:ring-1 focus:ring-accent outline-none resize-none"
                     />
@@ -1594,6 +1636,8 @@ export const AdminDashboard = () => {
                     <input 
                       type="text" 
                       value={pageConfig.footerText}
+                      title="Texto del Pie de Página"
+                      placeholder="Texto del pie de página"
                       onChange={(e) => setPageConfig({ ...pageConfig, footerText: e.target.value })}
                       className="w-full bg-input border border-border rounded-lg px-4 py-3 text-sm text-white focus:ring-1 focus:ring-accent outline-none"
                     />
@@ -1604,6 +1648,8 @@ export const AdminDashboard = () => {
                       <input 
                         type="email" 
                         value={pageConfig.contactEmail}
+                        title="Email de Contacto"
+                        placeholder="Correo electrónico"
                         onChange={(e) => setPageConfig({ ...pageConfig, contactEmail: e.target.value })}
                         className="w-full bg-input border border-border rounded-lg px-4 py-3 text-sm text-white focus:ring-1 focus:ring-accent outline-none"
                       />
@@ -1613,6 +1659,8 @@ export const AdminDashboard = () => {
                       <input 
                         type="text" 
                         value={pageConfig.contactPhone}
+                        title="Teléfono de Contacto"
+                        placeholder="Teléfono"
                         onChange={(e) => setPageConfig({ ...pageConfig, contactPhone: e.target.value })}
                         className="w-full bg-input border border-border rounded-lg px-4 py-3 text-sm text-white focus:ring-1 focus:ring-accent outline-none"
                       />
@@ -1623,6 +1671,8 @@ export const AdminDashboard = () => {
                     <input 
                       type="text" 
                       value={pageConfig.contactAddress}
+                      title="Dirección Física"
+                      placeholder="Dirección física"
                       onChange={(e) => setPageConfig({ ...pageConfig, contactAddress: e.target.value })}
                       className="w-full bg-input border border-border rounded-lg px-4 py-3 text-sm text-white focus:ring-1 focus:ring-accent outline-none"
                     />
@@ -1652,6 +1702,8 @@ export const AdminDashboard = () => {
                       <input 
                         type="text" 
                         value={pageConfig.heroImage}
+                        title="URL de la imagen principal"
+                        placeholder="URL de la imagen principal"
                         onChange={(e) => setPageConfig({ ...pageConfig, heroImage: e.target.value })}
                         className="flex-1 bg-input border border-border rounded-lg px-4 py-3 text-sm text-white focus:ring-1 focus:ring-accent outline-none"
                       />
@@ -1670,10 +1722,13 @@ export const AdminDashboard = () => {
                           value={pageConfig.accentColor}
                           onChange={(e) => setPageConfig({ ...pageConfig, accentColor: e.target.value })}
                           className="w-10 h-10 bg-transparent border-none outline-none cursor-pointer"
+                          title="Color de acento"
                         />
                         <input 
                           type="text" 
                           value={pageConfig.accentColor}
+                          title="Código de color de acento"
+                          placeholder="#000000"
                           onChange={(e) => setPageConfig({ ...pageConfig, accentColor: e.target.value })}
                           className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-accent outline-none"
                         />
@@ -1687,10 +1742,13 @@ export const AdminDashboard = () => {
                           value={pageConfig.primaryColor}
                           onChange={(e) => setPageConfig({ ...pageConfig, primaryColor: e.target.value })}
                           className="w-10 h-10 bg-transparent border-none outline-none cursor-pointer"
+                          title="Color primario"
                         />
                         <input 
                           type="text" 
                           value={pageConfig.primaryColor}
+                          title="Código de color primario"
+                          placeholder="#000000"
                           onChange={(e) => setPageConfig({ ...pageConfig, primaryColor: e.target.value })}
                           className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-accent outline-none"
                         />
@@ -1703,8 +1761,20 @@ export const AdminDashboard = () => {
                   <div className="p-4 bg-bg rounded-xl border border-border">
                     <p className="text-[10px] text-text-dim uppercase tracking-widest mb-2">Vista Previa de Estilo</p>
                     <div className="flex gap-2">
-                      <div className="w-full h-8 rounded" style={{ backgroundColor: pageConfig.primaryColor }}></div>
-                      <div className="w-full h-8 rounded" style={{ backgroundColor: pageConfig.accentColor }}></div>
+                      <div
+                        className="w-full h-8 rounded border border-border"
+                        style={{ backgroundColor: pageConfig.primaryColor }}
+                        aria-label="Color primario"
+                        title={pageConfig.primaryColor}
+                        tabIndex={0}
+                      ></div>
+                      <div
+                        className="w-full h-8 rounded border border-border"
+                        style={{ backgroundColor: pageConfig.accentColor }}
+                        aria-label="Color acento"
+                        title={pageConfig.accentColor}
+                        tabIndex={0}
+                      ></div>
                     </div>
                   </div>
                 </div>
@@ -1821,8 +1891,8 @@ export const AdminDashboard = () => {
                           {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button className="p-2 hover:bg-accent/10 text-accent rounded-lg transition-all">
-                            <TrendingUp className="w-4 h-4" />
+                          <button className="p-2 hover:bg-accent/10 text-accent rounded-lg transition-all" title="Eliminar servicio" aria-label="Eliminar servicio">
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </td>
                       </tr>
@@ -1940,8 +2010,14 @@ export const AdminDashboard = () => {
                       <td className="px-6 py-4 text-[10px] text-text-dim">
                         {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="p-2 hover:bg-accent/10 text-accent rounded-lg transition-all">
+                      <td className="px-6 py-4 text-right flex gap-2 justify-end">
+                        <button className="p-2 hover:bg-accent/10 text-accent rounded-lg transition-all" title="Eliminar servicio" aria-label="Eliminar servicio">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button className="p-2 hover:bg-accent/10 text-accent rounded-lg transition-all" title="Eliminar producto" aria-label="Eliminar producto">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button className="p-2 hover:bg-accent/10 text-accent rounded-lg transition-all" title="Enviar mensaje" aria-label="Enviar mensaje">
                           <MessageSquare className="w-4 h-4" />
                         </button>
                       </td>
@@ -1968,6 +2044,8 @@ export const AdminDashboard = () => {
                     <Package className="w-4 h-4" /> Productos Digitales
                   </h2>
                   <button 
+                    title="Agregar nuevo servicio"
+                    aria-label="Agregar nuevo servicio"
                     onClick={() => {
                       setEditingProduct(null);
                       setNewProduct({ name: '', description: '', price: 0, category: 'software', image: '' });
@@ -2058,6 +2136,8 @@ export const AdminDashboard = () => {
                         </div>
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
+                            title="Editar servicio"
+                            aria-label="Editar servicio"
                             onClick={() => setEditingProduct(prod)}
                             className="p-2 hover:bg-accent/10 text-accent rounded-lg"
                           >
@@ -2066,6 +2146,8 @@ export const AdminDashboard = () => {
                           <button 
                             onClick={() => handleDeleteProduct(prod.id)}
                             className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
+                            title="Eliminar producto"
+                            aria-label="Eliminar producto"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -2083,6 +2165,8 @@ export const AdminDashboard = () => {
                     <ShoppingBag className="w-4 h-4" /> Servicios de Obra
                   </h2>
                   <button 
+                    title="Agregar nuevo producto"
+                    aria-label="Agregar nuevo producto"
                     onClick={() => {
                       setEditingService(null);
                       setNewService({ title: '', description: '', detailedDescription: '', price: 0, category: 'construccion', icon: 'HardHat' });
@@ -2162,6 +2246,8 @@ export const AdminDashboard = () => {
                         </div>
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button 
+                            title="Editar producto"
+                            aria-label="Editar producto"
                             onClick={() => setEditingService(serv)}
                             className="p-2 hover:bg-accent/10 text-accent rounded-lg"
                           >
@@ -2170,6 +2256,8 @@ export const AdminDashboard = () => {
                           <button 
                             onClick={() => handleDeleteService(serv.id)}
                             className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
+                            title="Eliminar servicio"
+                            aria-label="Eliminar servicio"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
