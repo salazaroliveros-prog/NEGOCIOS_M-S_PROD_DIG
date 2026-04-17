@@ -1,4 +1,15 @@
 import React from 'react';
+// ...existing code...
+
+// Eliminar comprobante validado
+const handleDeleteControl = async (id: string) => {
+  if (!confirm('¿Seguro que deseas eliminar este comprobante validado?')) return;
+  try {
+    await deleteDoc(doc(db, 'payment_receipts_control', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `payment_receipts_control/${id}`);
+  }
+};
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -25,21 +36,21 @@ import {
   Image as ImageIcon,
   LogOut
 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer
 } from 'recharts';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
-import { 
-  collection, 
-  onSnapshot, 
-  query, 
-  orderBy, 
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
   addDoc,
   Timestamp,
   doc,
@@ -53,6 +64,29 @@ import {
 import { onAuthStateChanged } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { DIGITAL_PRODUCTS } from '../constants/data';
+import { AdminEditBar } from '../components/AdminEditBar';
+import { AdminBannerEditor } from '../components/AdminBannerEditor';
+import Papa from 'papaparse';
+import { saveAs } from 'file-saver';
+import jsPDF from 'jspdf';
+// Exportar PDF
+const handleExportPDF = () => {
+  const doc = new jsPDF();
+  doc.setFontSize(16);
+  doc.text('Informe de Ventas Semanales', 14, 18);
+  doc.setFontSize(12);
+  // Encabezados
+  const headers = [['Día', 'Ventas', 'Proyectado']];
+  // Datos
+  const rows = data.map(row => [row.name, row.ventas.toString(), row.proyectado.toString()]);
+  // Tabla manual
+  let y = 30;
+  headers.concat(rows).forEach((row, i) => {
+    doc.text(row.join('   '), 14, y);
+    y += 10;
+  });
+  doc.save('informe-ventas.pdf');
+};
 
 const data = [
   { name: 'Lun', ventas: 4000, proyectado: 4400 },
@@ -65,12 +99,142 @@ const data = [
 ];
 
 export const AdminDashboard = () => {
+  // ...existing code...
+
+  // Actualizar comprobante validado
+  const handleUpdateControl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingControl) return;
+    try {
+      await updateDoc(doc(db, 'payment_receipts_control', editingControl.id), editingControl);
+      setEditingControl(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `payment_receipts_control/${editingControl.id}`);
+    }
+  };
+  // Estado para el rol de usuario (debe ir antes de cualquier useEffect que lo use)
+  const [userRole, setUserRole] = React.useState<'admin' | 'editor' | 'viewer' | null>(null);
+
+  // Estado para comprobantes validados (control)
+  const [paymentReceiptsControl, setPaymentReceiptsControl] = React.useState<any[]>([]);
+  const [editingControl, setEditingControl] = React.useState<any>(null);
+  const [controlToDelete, setControlToDelete] = React.useState<string | null>(null);
+
+  // Leer comprobantes validados (control)
+  React.useEffect(() => {
+    if (userRole !== 'admin') return;
+    const q = query(collection(db, 'payment_receipts_control'), orderBy('validatedAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setPaymentReceiptsControl(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'payment_receipts_control');
+    });
+    return () => unsubscribe();
+  }, [userRole]);
+  // Estado para mostrar paneles de edición rápida
+  // Filtros para comprobantes validados
+  const [filterUser, setFilterUser] = React.useState('');
+  const [filterProduct, setFilterProduct] = React.useState('');
+  const [filterDate, setFilterDate] = React.useState('');
+
+  // Obtener valores únicos para selects
+  const uniqueUsers = Array.from(new Set(paymentReceiptsControl.map(ctrl => ctrl.userName)));
+  const uniqueProducts = Array.from(new Set(paymentReceiptsControl.map(ctrl => ctrl.productName)));
+
+  // Filtrar comprobantes
+  const filteredControls = paymentReceiptsControl.filter(ctrl => {
+    const userMatch = filterUser ? ctrl.userName === filterUser : true;
+    const productMatch = filterProduct ? ctrl.productName === filterProduct : true;
+    const dateMatch = filterDate ? (ctrl.validatedAt && new Date(ctrl.validatedAt).toISOString().slice(0, 10) === filterDate) : true;
+    return userMatch && productMatch && dateMatch;
+  });
+
+  // Exportar CSV de comprobantes validados filtrados
+  const handleExportControlCSV = () => {
+    const exportData = filteredControls.map(ctrl => ({
+      Usuario: ctrl.userName,
+      Producto: ctrl.productName,
+      Fecha: ctrl.validatedAt ? new Date(ctrl.validatedAt).toLocaleString() : '',
+      Imagen: ctrl.imageBase64 ? '[base64]' : ''
+    }));
+    const csv = Papa.unparse(exportData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    saveAs(blob, 'comprobantes-validados.csv');
+  };
+
+  // Exportar PDF de comprobantes validados filtrados
+  const handleExportControlPDF = () => {
+    const docPDF = new jsPDF();
+    docPDF.setFontSize(14);
+    docPDF.text('Comprobantes Validados', 14, 18);
+    docPDF.setFontSize(10);
+    let y = 30;
+    docPDF.text('Usuario', 14, y);
+    docPDF.text('Producto', 64, y);
+    docPDF.text('Fecha', 114, y);
+    y += 8;
+    filteredControls.forEach(ctrl => {
+      docPDF.text(String(ctrl.userName || ''), 14, y);
+      docPDF.text(String(ctrl.productName || ''), 64, y);
+      docPDF.text(ctrl.validatedAt ? new Date(ctrl.validatedAt).toLocaleString() : '', 114, y);
+      y += 8;
+      if (y > 270) {
+        docPDF.addPage();
+        y = 20;
+      }
+    });
+    docPDF.save('comprobantes-validados.pdf');
+  };
+  const [showPalette, setShowPalette] = React.useState(false);
+  const [showImages, setShowImages] = React.useState(false);
+  const [showTexts, setShowTexts] = React.useState(false);
+  const [showEffects, setShowEffects] = React.useState(false);
+
+  // Handlers para la barra de edición
+  const handleOpenPalette = () => {
+    setActiveTab('config');
+    setShowPalette(true);
+    setShowImages(false);
+    setShowTexts(false);
+    setShowEffects(false);
+  };
+  const handleOpenImages = () => {
+    setActiveTab('config');
+    setShowPalette(false);
+    setShowImages(true);
+    setShowTexts(false);
+    setShowEffects(false);
+  };
+  const handleOpenTexts = () => {
+    setActiveTab('config');
+    setShowPalette(false);
+    setShowImages(false);
+    setShowTexts(true);
+    setShowEffects(false);
+  };
+  const handleOpenEffects = () => {
+    setActiveTab('config');
+    setShowPalette(false);
+    setShowImages(false);
+    setShowTexts(false);
+    setShowEffects(true);
+  };
+  const handleSaveFromBar = () => {
+    if (activeTab === 'config') handleSaveConfig();
+  };
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = React.useState<'resumen' | 'chat' | 'proyectos' | 'tareas' | 'config' | 'usuarios' | 'ventas' | 'clientes' | 'ajustes' | 'leads'>('resumen');
   const [chatFilter, setChatFilter] = React.useState<'active' | 'closed'>('active');
-  const [userRole, setUserRole] = React.useState<'admin' | 'editor' | 'viewer' | null>(null);
-  
+
   // Leads State
+
+  // Exportar CSV
+  const handleExportCSV = () => {
+    // Exporta los datos de ventas semanales (data)
+    const csv = Papa.unparse(data);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    saveAs(blob, 'ventas-semanales.csv');
+  };
   const [leads, setLeads] = React.useState<any[]>([]);
   const [chatSessions, setChatSessions] = React.useState<any[]>([]);
   const [selectedChatId, setSelectedChatId] = React.useState<string | null>(null);
@@ -78,13 +242,13 @@ export const AdminDashboard = () => {
   const [replyText, setReplyText] = React.useState('');
   const [isTyping, setIsTyping] = React.useState(false);
   const [adminAvatar, setAdminAvatar] = React.useState<string>('https://api.dicebear.com/7.x/bottts/svg?seed=admin');
-  
+
   // Users State
   const [allUsers, setAllUsers] = React.useState<any[]>([]);
-  
+
   // Payment Validation State
   const [paymentReceipts, setPaymentReceipts] = React.useState<any[]>([]);
-  
+
   // Notification Permission
   React.useEffect(() => {
     if ("Notification" in window) {
@@ -103,7 +267,7 @@ export const AdminDashboard = () => {
   const [newProject, setNewProject] = React.useState({ title: '', description: '', image: '', link: '', deliveryDate: '', status: 'active' });
   const [editingProject, setEditingProject] = React.useState<any>(null);
   const [projectToDelete, setProjectToDelete] = React.useState<string | null>(null);
-  
+
   // Tasks State
   const [tasks, setTasks] = React.useState<any[]>([]);
   const [prevTasksCount, setPrevTasksCount] = React.useState(0);
@@ -173,14 +337,14 @@ export const AdminDashboard = () => {
   React.useEffect(() => {
     if (!userRole) return;
     const q = query(
-      collection(db, 'chats'), 
+      collection(db, 'chats'),
       orderBy('createdAt', 'desc')
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const sessions = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter((chat: any) => chat.status === chatFilter);
-      
+
       // Notify on new active chat
       if (chatFilter === 'active' && sessions.length > chatSessions.length) {
         const newChat = sessions.find(s => !chatSessions.find(cs => cs.id === s.id)) as any;
@@ -216,7 +380,7 @@ export const AdminDashboard = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setMessages(msgs);
-      
+
       // Mark as read
       msgs.forEach((msg: any) => {
         if (msg.sender === 'user' && !msg.read) {
@@ -247,7 +411,7 @@ export const AdminDashboard = () => {
     const q = query(collection(db, 'tasks'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const taskList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
+
       // Check for upcoming deadlines (2 days before)
       const now = new Date();
       const twoDaysFromNow = new Date();
@@ -257,7 +421,7 @@ export const AdminDashboard = () => {
         if (task.dueDate && task.status !== 'done') {
           const dueDate = new Date(task.dueDate);
           const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          
+
           if (diffDays <= 2 && diffDays > 0 && !task.reminderSent) {
             sendNotification('Tarea Próxima a Vencer', `La tarea "${task.title}" vence en ${diffDays} días.`);
             // Mark reminder as sent to avoid spam
@@ -266,13 +430,13 @@ export const AdminDashboard = () => {
           }
         }
       });
-      
+
       // Notify on new task
       if (taskList.length > prevTasksCount && prevTasksCount > 0) {
         const latestTask = taskList[0] as any;
         sendNotification('Nueva Tarea', `Se ha creado la tarea: ${latestTask.title}`);
       }
-      
+
       setTasks(taskList);
       setPrevTasksCount(taskList.length);
     }, (error) => {
@@ -373,7 +537,40 @@ export const AdminDashboard = () => {
         purchases: arrayUnion(receipt.productId)
       });
 
-      // 3. Send notification to user
+      // 3. Convert image to base64 if needed
+      let imageBase64 = '';
+      const isBase64 = typeof receipt.receiptImageUrl === 'string' && receipt.receiptImageUrl.startsWith('data:image/');
+      if (isBase64) {
+        imageBase64 = receipt.receiptImageUrl;
+      } else if (typeof receipt.receiptImageUrl === 'string') {
+        // Descargar y convertir a base64
+        try {
+          const response = await fetch(receipt.receiptImageUrl);
+          const blob = await response.blob();
+          imageBase64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (e) {
+          imageBase64 = '';
+        }
+      }
+
+      // 4. Guardar en tabla de control
+      await addDoc(collection(db, 'payment_receipts_control'), {
+        id: `control_${Date.now()}`,
+        userId: receipt.userId,
+        userName: receipt.userName,
+        productId: receipt.productId,
+        productName: receipt.productName,
+        imageBase64,
+        validatedAt: new Date().toISOString(),
+        originalReceiptId: receipt.id
+      });
+
+      // 5. Send notification to user
       await addDoc(collection(db, 'notifications'), {
         id: `notif_${Date.now()}`,
         userId: receipt.userId,
@@ -438,7 +635,7 @@ export const AdminDashboard = () => {
           const lastActivity = (session.lastActivity as Timestamp).toMillis();
           if (now - lastActivity > INACTIVITY_LIMIT) {
             try {
-              await updateDoc(doc(db, 'chats', session.id), { 
+              await updateDoc(doc(db, 'chats', session.id), {
                 status: 'closed',
                 closedReason: 'inactivity'
               });
@@ -464,11 +661,11 @@ export const AdminDashboard = () => {
   // Task Reminders
   React.useEffect(() => {
     if (!userRole || tasks.length === 0) return;
-    
+
     const checkReminders = async () => {
       const now = new Date();
       const twoDaysFromNow = new Date(now.getTime() + (2 * 24 * 60 * 60 * 1000));
-      
+
       for (const task of tasks) {
         if (task.status !== 'done' && task.dueDate && !task.reminderSent) {
           const dueDate = new Date(task.dueDate);
@@ -476,10 +673,10 @@ export const AdminDashboard = () => {
             try {
               // Send browser notification
               sendNotification('Recordatorio de Tarea', `La tarea "${task.title}" vence pronto (${task.dueDate})`);
-              
+
               // Update task to avoid duplicate reminders
               await updateDoc(doc(db, 'tasks', task.id), { reminderSent: true });
-              
+
               // Add in-app notification for admin
               const adminId = auth.currentUser?.uid;
               if (adminId) {
@@ -523,7 +720,7 @@ export const AdminDashboard = () => {
       });
       setReplyText('');
       // Reset typing indicator and update activity
-      await updateDoc(doc(db, 'chats', selectedChatId), { 
+      await updateDoc(doc(db, 'chats', selectedChatId), {
         adminTyping: false,
         lastActivity: serverTimestamp(),
         lastMessage: replyText,
@@ -556,7 +753,7 @@ export const AdminDashboard = () => {
   const handleAddProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProject.title || !newProject.image) return;
-    
+
     if (!validateImageUrl(newProject.image)) {
       alert('Por favor, ingresa una URL de imagen válida (.jpg, .png, .jpeg, .gif, .webp)');
       return;
@@ -705,11 +902,11 @@ export const AdminDashboard = () => {
   const handleUpdateSectionContent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingLandingSection) return;
-    
-    const newSections = landingSections.map(s => 
+
+    const newSections = landingSections.map(s =>
       s.id === editingLandingSection.id ? editingLandingSection : s
     );
-    
+
     try {
       await handleUpdateLandingSections(newSections);
       setEditingLandingSection(null);
@@ -778,15 +975,15 @@ export const AdminDashboard = () => {
           <LayoutDashboard className="w-6 h-6 text-accent" />
           <span className="text-xl font-bold tracking-tighter uppercase">ADMIN PORTAL</span>
         </div>
-        
+
         <nav className="flex-1 space-y-2">
-          <button 
+          <button
             onClick={() => setActiveTab('resumen')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs uppercase tracking-widest transition-all ${activeTab === 'resumen' ? 'bg-bg border border-border text-white font-medium' : 'text-text-dim hover:bg-bg hover:text-white'}`}
           >
             <TrendingUp className="w-4 h-4 text-accent" /> Resumen
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('chat')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs uppercase tracking-widest transition-all ${activeTab === 'chat' ? 'bg-bg border border-border text-white font-medium' : 'text-text-dim hover:bg-bg hover:text-white'}`}
           >
@@ -794,26 +991,26 @@ export const AdminDashboard = () => {
           </button>
           {(userRole === 'admin' || userRole === 'editor') && (
             <>
-              <button 
+              <button
                 onClick={() => setActiveTab('proyectos')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs uppercase tracking-widest transition-all ${activeTab === 'proyectos' ? 'bg-bg border border-border text-white font-medium' : 'text-text-dim hover:bg-bg hover:text-white'}`}
               >
                 <Package className="w-4 h-4 text-accent" /> Proyectos
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('tareas')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs uppercase tracking-widest transition-all ${activeTab === 'tareas' ? 'bg-bg border border-border text-white font-medium' : 'text-text-dim hover:bg-bg hover:text-white'}`}
               >
                 <CheckCircle2 className="w-4 h-4 text-accent" /> Tareas
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('config')}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs uppercase tracking-widest transition-all ${activeTab === 'config' ? 'bg-bg border border-border text-white font-medium' : 'text-text-dim hover:bg-bg hover:text-white'}`}
               >
                 <Palette className="w-4 h-4 text-accent" /> Editor de Página
               </button>
               {userRole === 'admin' && (
-                <button 
+                <button
                   onClick={() => setActiveTab('usuarios')}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs uppercase tracking-widest transition-all ${activeTab === 'usuarios' ? 'bg-bg border border-border text-white font-medium' : 'text-text-dim hover:bg-bg hover:text-white'}`}
                 >
@@ -822,25 +1019,25 @@ export const AdminDashboard = () => {
               )}
             </>
           )}
-          <button 
+          <button
             onClick={() => setActiveTab('leads')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs uppercase tracking-widest transition-all ${activeTab === 'leads' ? 'bg-bg border border-border text-white font-medium' : 'text-text-dim hover:bg-bg hover:text-white'}`}
           >
             <Users className="w-4 h-4 text-accent" /> Prospectos (Leads)
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('ventas')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs uppercase tracking-widest transition-all ${activeTab === 'ventas' ? 'bg-bg border border-border text-white font-medium' : 'text-text-dim hover:bg-bg hover:text-white'}`}
           >
             <ShoppingBag className="w-4 h-4 text-accent" /> Ventas
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('clientes')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs uppercase tracking-widest transition-all ${activeTab === 'clientes' ? 'bg-bg border border-border text-white font-medium' : 'text-text-dim hover:bg-bg hover:text-white'}`}
           >
             <Users className="w-4 h-4 text-accent" /> Clientes
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('ajustes')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-xs uppercase tracking-widest transition-all ${activeTab === 'ajustes' ? 'bg-bg border border-border text-white font-medium' : 'text-text-dim hover:bg-bg hover:text-white'}`}
           >
@@ -856,7 +1053,7 @@ export const AdminDashboard = () => {
               <p className="text-[10px] text-text-dim">{auth.currentUser?.email}</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={async () => {
               await auth.signOut();
               navigate('/login');
@@ -868,6 +1065,16 @@ export const AdminDashboard = () => {
         </div>
       </aside>
 
+      {/* Barra flotante de edición para admin */}
+      {userRole === 'admin' && (
+        <AdminEditBar
+          onOpenPalette={handleOpenPalette}
+          onOpenImages={handleOpenImages}
+          onOpenTexts={handleOpenTexts}
+          onOpenEffects={handleOpenEffects}
+          onSave={handleSaveFromBar}
+        />
+      )}
       {/* Main Content */}
       <main className="flex-1 md:ml-64 p-8">
         {activeTab === 'resumen' && (
@@ -878,10 +1085,16 @@ export const AdminDashboard = () => {
                 <p className="text-text-dim text-xs uppercase tracking-widest mt-1">Monitoreo de rendimiento y métricas clave.</p>
               </div>
               <div className="flex gap-3">
-                <button className="flex items-center gap-2 px-4 py-2 bg-panel border border-border rounded-lg text-[10px] font-bold text-accent hover:bg-bg transition-all uppercase tracking-widest">
+                <button
+                  className="flex items-center gap-2 px-4 py-2 bg-panel border border-border rounded-lg text-[10px] font-bold text-accent hover:bg-bg transition-all uppercase tracking-widest"
+                  onClick={handleExportCSV}
+                >
                   <Download className="w-4 h-4" /> Exportar CSV
                 </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-accent text-black rounded-lg text-[10px] font-bold hover:bg-accent/90 transition-all uppercase tracking-widest">
+                <button
+                  className="flex items-center gap-2 px-4 py-2 bg-accent text-black rounded-lg text-[10px] font-bold hover:bg-accent/90 transition-all uppercase tracking-widest"
+                  onClick={handleExportPDF}
+                >
                   <FileText className="w-4 h-4" /> Informe PDF
                 </button>
               </div>
@@ -918,7 +1131,7 @@ export const AdminDashboard = () => {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                       <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#8e9299' }} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#8e9299' }} />
-                      <Tooltip 
+                      <Tooltip
                         contentStyle={{ backgroundColor: '#1a1c1e', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
                         itemStyle={{ color: '#e0e0e0', fontSize: '12px' }}
                       />
@@ -933,17 +1146,17 @@ export const AdminDashboard = () => {
                 <h3 className="text-xs font-bold uppercase tracking-widest text-accent mb-6">Canales Activos</h3>
                 <div className="space-y-8">
                   {[
-                    { label: 'Productos Digitales', value: 40, color: 'bg-gold' },
-                    { label: 'Servicios de Construcción', value: 60, color: 'bg-text-dim' },
+                    { label: 'Productos Digitales', value: 40, color: 'bg-gold', widthClass: 'w-[40%]' },
+                    { label: 'Servicios de Construcción', value: 60, color: 'bg-text-dim', widthClass: 'w-[60%]' },
                   ].map((channel, i) => (
-                    <div key={i} className="space-y-3" style={{ '--progress-width': `${channel.value}%` } as React.CSSProperties}>
+                    <div key={i} className="space-y-3">
                       <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
                         <span>{channel.label}</span>
                         <span className="text-accent">{channel.value}%</span>
                       </div>
                       <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                         <div
-                          className={`h-full ${channel.color}`}
+                          className={`h-full ${channel.color} ${channel.widthClass}`}
                           aria-label={`Progreso ${channel.label}`}
                           title={`Progreso ${channel.label}: ${channel.value}%`}
                           tabIndex={0}
@@ -964,13 +1177,13 @@ export const AdminDashboard = () => {
               <div className="p-6 border-b border-border flex justify-between items-center">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-accent">Chats</h2>
                 <div className="flex bg-bg rounded-lg p-1 border border-border">
-                  <button 
+                  <button
                     onClick={() => setChatFilter('active')}
                     className={`px-3 py-1 text-[9px] font-bold uppercase rounded-md transition-all ${chatFilter === 'active' ? 'bg-accent text-black' : 'text-text-dim hover:text-white'}`}
                   >
                     Activos
                   </button>
-                  <button 
+                  <button
                     onClick={() => setChatFilter('closed')}
                     className={`px-3 py-1 text-[9px] font-bold uppercase rounded-md transition-all ${chatFilter === 'closed' ? 'bg-accent text-black' : 'text-text-dim hover:text-white'}`}
                   >
@@ -1010,10 +1223,10 @@ export const AdminDashboard = () => {
                 <>
                   <div className="p-6 border-b border-border flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                      <img 
-                        src={chatSessions.find(c => c.id === selectedChatId)?.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'} 
-                        alt="Avatar" 
-                        className="w-10 h-10 rounded-full bg-bg border border-border" 
+                      <img
+                        src={chatSessions.find(c => c.id === selectedChatId)?.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
+                        alt="Avatar"
+                        className="w-10 h-10 rounded-full bg-bg border border-border"
                       />
                       <div>
                         <h2 className="text-white font-bold">Visitante ({selectedChatId})</h2>
@@ -1021,7 +1234,7 @@ export const AdminDashboard = () => {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <select 
+                      <select
                         title="Asignar responsable del chat"
                         aria-label="Asignar responsable del chat"
                         onChange={(e) => {
@@ -1038,7 +1251,7 @@ export const AdminDashboard = () => {
                         <option value="Editor 1">Editor 1</option>
                         <option value="Soporte">Soporte</option>
                       </select>
-                      <button 
+                      <button
                         onClick={async () => {
                           if (selectedChatId) {
                             try {
@@ -1061,17 +1274,16 @@ export const AdminDashboard = () => {
                         key={msg.id}
                         className={`flex gap-3 ${msg.sender === 'admin' ? 'flex-row-reverse' : 'flex-row'}`}
                       >
-                        <img 
-                          src={msg.sender === 'admin' ? (msg.senderAvatar || adminAvatar) : (msg.senderAvatar || chatSessions.find(c => c.id === selectedChatId)?.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor')} 
-                          alt="Avatar" 
+                        <img
+                          src={msg.sender === 'admin' ? (msg.senderAvatar || adminAvatar) : (msg.senderAvatar || chatSessions.find(c => c.id === selectedChatId)?.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor')}
+                          alt="Avatar"
                           className="w-8 h-8 rounded-full bg-panel border border-border shrink-0 mt-1"
                         />
                         <div
-                          className={`max-w-[70%] p-4 rounded-xl text-sm ${
-                            msg.sender === 'admin'
-                              ? 'bg-accent text-black rounded-tr-none'
-                              : 'bg-input border border-border text-white rounded-tl-none'
-                          }`}
+                          className={`max-w-[70%] p-4 rounded-xl text-sm ${msg.sender === 'admin'
+                            ? 'bg-accent text-black rounded-tr-none'
+                            : 'bg-input border border-border text-white rounded-tl-none'
+                            }`}
                         >
                           {msg.text}
                           <div className="flex items-center justify-between mt-1 gap-4">
@@ -1089,10 +1301,10 @@ export const AdminDashboard = () => {
                     ))}
                     {chatSessions.find(c => c.id === selectedChatId)?.userTyping && (
                       <div className="flex justify-start items-center gap-2">
-                        <img 
-                          src={chatSessions.find(c => c.id === selectedChatId)?.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'} 
-                          alt="Avatar" 
-                          className="w-8 h-8 rounded-full bg-panel border border-border animate-bounce" 
+                        <img
+                          src={chatSessions.find(c => c.id === selectedChatId)?.userAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=visitor'}
+                          alt="Avatar"
+                          className="w-8 h-8 rounded-full bg-panel border border-border animate-bounce"
                         />
                         <div className="bg-input border border-border text-accent p-2 rounded-lg text-[10px] animate-pulse font-bold">
                           Usuario está escribiendo...
@@ -1149,18 +1361,17 @@ export const AdminDashboard = () => {
                     <Palette className="w-4 h-4" /> Vista Previa Principal
                   </h3>
                   <p className="text-[10px] text-text-dim uppercase tracking-widest mb-6">Reordena las secciones de la página de inicio</p>
-                  
+
                   <div className="space-y-3">
                     {landingSections.map((section, index) => (
-                      <div 
-                        key={section.id} 
-                        className={`flex items-center justify-between p-4 bg-bg border rounded-xl group hover:border-accent/30 transition-all ${
-                          editingLandingSection?.id === section.id ? 'border-accent ring-1 ring-accent' : 'border-border'
-                        }`}
+                      <div
+                        key={section.id}
+                        className={`flex items-center justify-between p-4 bg-bg border rounded-xl group hover:border-accent/30 transition-all ${editingLandingSection?.id === section.id ? 'border-accent ring-1 ring-accent' : 'border-border'
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <div className="flex flex-col gap-1">
-                            <button 
+                            <button
                               onClick={() => moveSection(index, 'up')}
                               className="text-text-dim hover:text-accent disabled:opacity-0"
                               disabled={index === 0}
@@ -1169,7 +1380,7 @@ export const AdminDashboard = () => {
                             >
                               <Plus className="w-3 h-3 rotate-180" />
                             </button>
-                            <button 
+                            <button
                               onClick={() => moveSection(index, 'down')}
                               className="text-text-dim hover:text-accent disabled:opacity-0"
                               disabled={index === landingSections.length - 1}
@@ -1185,7 +1396,7 @@ export const AdminDashboard = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button 
+                          <button
                             onClick={() => setEditingLandingSection(section)}
                             className={`p-2 rounded-lg transition-all ${editingLandingSection?.id === section.id ? 'text-accent bg-accent/20' : 'text-text-dim hover:text-white'}`}
                             title="Editar sección"
@@ -1193,7 +1404,7 @@ export const AdminDashboard = () => {
                           >
                             <Settings className="w-4 h-4" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => {
                               const newSections = [...landingSections];
                               newSections[index].visible = !newSections[index].visible;
@@ -1221,10 +1432,10 @@ export const AdminDashboard = () => {
                       <form onSubmit={handleUpdateSectionContent} className="space-y-4">
                         <div>
                           <label className="block text-[9px] uppercase font-bold text-text-dim mb-2">Título de Sección</label>
-                          <input 
+                          <input
                             type="text"
                             value={editingLandingSection.title}
-                            onChange={(e) => setEditingLandingSection({...editingLandingSection, title: e.target.value})}
+                            onChange={(e) => setEditingLandingSection({ ...editingLandingSection, title: e.target.value })}
                             className="w-full bg-input border border-border rounded-lg px-4 py-2 text-xs text-white outline-none focus:border-accent"
                             title="Título de sección"
                             placeholder="Título de la sección"
@@ -1232,9 +1443,9 @@ export const AdminDashboard = () => {
                         </div>
                         <div>
                           <label className="block text-[9px] uppercase font-bold text-text-dim mb-2">Subtítulo / Descripción</label>
-                          <textarea 
+                          <textarea
                             value={editingLandingSection.subtitle || ''}
-                            onChange={(e) => setEditingLandingSection({...editingLandingSection, subtitle: e.target.value})}
+                            onChange={(e) => setEditingLandingSection({ ...editingLandingSection, subtitle: e.target.value })}
                             className="w-full bg-input border border-border rounded-lg px-4 py-2 text-xs text-white outline-none focus:border-accent h-20"
                             title="Subtítulo o descripción"
                             placeholder="Subtítulo o descripción"
@@ -1243,10 +1454,10 @@ export const AdminDashboard = () => {
                         {editingLandingSection.image !== undefined && (
                           <div>
                             <label className="block text-[9px] uppercase font-bold text-text-dim mb-2">URL de Imagen</label>
-                            <input 
+                            <input
                               type="text"
                               value={editingLandingSection.image}
-                              onChange={(e) => setEditingLandingSection({...editingLandingSection, image: e.target.value})}
+                              onChange={(e) => setEditingLandingSection({ ...editingLandingSection, image: e.target.value })}
                               className="w-full bg-input border border-border rounded-lg px-4 py-2 text-xs text-white outline-none focus:border-accent"
                               title="URL de imagen"
                               placeholder="https://images.unsplash.com/..."
@@ -1280,7 +1491,7 @@ export const AdminDashboard = () => {
                     <input
                       type="text"
                       value={editingProject ? editingProject.title : newProject.title}
-                      onChange={(e) => editingProject 
+                      onChange={(e) => editingProject
                         ? setEditingProject({ ...editingProject, title: e.target.value })
                         : setNewProject({ ...newProject, title: e.target.value })}
                       className="w-full bg-input border border-border rounded-lg px-4 py-2 text-sm text-white focus:ring-1 focus:ring-accent outline-none"
@@ -1308,18 +1519,17 @@ export const AdminDashboard = () => {
                       onChange={(e) => editingProject
                         ? setEditingProject({ ...editingProject, image: e.target.value })
                         : setNewProject({ ...newProject, image: e.target.value })}
-                      className={`w-full bg-input border rounded-lg px-4 py-2 text-sm text-white focus:ring-1 focus:ring-accent outline-none ${
-                        (editingProject?.image || newProject.image) && !validateImageUrl(editingProject?.image || newProject.image) 
+                      className={`w-full bg-input border rounded-lg px-4 py-2 text-sm text-white focus:ring-1 focus:ring-accent outline-none ${(editingProject?.image || newProject.image) && !validateImageUrl(editingProject?.image || newProject.image)
                         ? 'border-red-500' : 'border-border'
-                      }`}
+                        }`}
                       title="URL de imagen"
                       placeholder="https://images.unsplash.com/..."
                     />
                     {(editingProject?.image || newProject.image) && (
                       <div className="mt-4 rounded-lg overflow-hidden border border-border h-32">
-                        <img 
-                          src={editingProject ? editingProject.image : newProject.image} 
-                          alt="Preview" 
+                        <img
+                          src={editingProject ? editingProject.image : newProject.image}
+                          alt="Preview"
                           className="w-full h-full object-cover"
                           onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/400x200?text=Imagen+No+Válida')}
                         />
@@ -1381,7 +1591,7 @@ export const AdminDashboard = () => {
                       { name: 'LinkedIn', color: 'hover:text-[#0A66C2]', url: 'https://linkedin.com' },
                       { name: 'Instagram', color: 'hover:text-[#E4405F]', url: 'https://instagram.com' }
                     ].map((social) => (
-                      <a 
+                      <a
                         key={social.name}
                         href={social.url}
                         target="_blank"
@@ -1394,8 +1604,8 @@ export const AdminDashboard = () => {
                       </a>
                     ))}
                   </div>
-                  
-                  <button 
+
+                  <button
                     onClick={() => alert('Se ha enviado una notificación por correo a todos los usuarios suscritos sobre los nuevos diseños.')}
                     className="w-full flex items-center justify-center gap-2 p-4 bg-bg border border-border rounded-xl text-white hover:border-accent transition-all group mt-4"
                   >
@@ -1408,26 +1618,24 @@ export const AdminDashboard = () => {
               {/* List */}
               <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                 {projects.map((proj) => (
-                  <div 
-                    key={proj.id} 
-                    className={`bg-panel rounded-xl border overflow-hidden group transition-all ${
-                      proj.status === 'completed' ? 'border-green-500 shadow-lg shadow-green-500/5' : 'border-border'
-                    }`}
+                  <div
+                    key={proj.id}
+                    className={`bg-panel rounded-xl border overflow-hidden group transition-all ${proj.status === 'completed' ? 'border-green-500 shadow-lg shadow-green-500/5' : 'border-border'
+                      }`}
                   >
                     <div className="h-40 relative">
                       <img src={proj.image} alt={proj.title} className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all" />
                       <div className="absolute top-4 right-4 flex gap-2">
-                        <button 
+                        <button
                           onClick={() => toggleProjectStatus(proj.id, proj.status)}
-                          className={`p-2 rounded-lg transition-all ${
-                            proj.status === 'completed' ? 'bg-green-500 text-white' : 'bg-white/10 text-white hover:bg-green-500 hover:text-white'
-                          }`}
+                          className={`p-2 rounded-lg transition-all ${proj.status === 'completed' ? 'bg-green-500 text-white' : 'bg-white/10 text-white hover:bg-green-500 hover:text-white'
+                            }`}
                           title={proj.status === 'completed' ? 'Marcar como Activo' : 'Marcar como Completo'}
                           aria-label={proj.status === 'completed' ? 'Marcar como Activo' : 'Marcar como Completo'}
                         >
                           <CheckCircle2 className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => setEditingProject(proj)}
                           className="p-2 bg-accent text-black rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                           title="Editar proyecto"
@@ -1435,11 +1643,10 @@ export const AdminDashboard = () => {
                         >
                           <Settings className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => deleteProject(proj.id)}
-                          className={`p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${
-                            projectToDelete === proj.id ? 'bg-red-600 text-white animate-pulse' : 'bg-red-500 text-white'
-                          }`}
+                          className={`p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${projectToDelete === proj.id ? 'bg-red-600 text-white animate-pulse' : 'bg-red-500 text-white'
+                            }`}
                           title="Eliminar proyecto"
                           aria-label="Eliminar proyecto"
                         >
@@ -1544,15 +1751,14 @@ export const AdminDashboard = () => {
                     {tasks.filter(t => t.status === status).map((task) => (
                       <div key={task.id} className="bg-panel p-4 rounded-xl border border-border shadow-sm group">
                         <div className="flex justify-between items-start mb-2">
-                          <span className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded ${
-                            task.priority === 'high' ? 'bg-red-500/10 text-red-500' : 
+                          <span className={`text-[8px] font-bold uppercase px-2 py-0.5 rounded ${task.priority === 'high' ? 'bg-red-500/10 text-red-500' :
                             task.priority === 'medium' ? 'bg-accent/10 text-accent' : 'bg-green-500/10 text-green-500'
-                          }`}>
+                            }`}>
                             {task.priority}
                           </span>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                             {status !== 'done' && (
-                              <button 
+                              <button
                                 onClick={() => updateTaskStatus(task.id, status === 'todo' ? 'in-progress' : 'done')}
                                 className="p-1 hover:bg-bg rounded text-accent"
                                 title={status === 'todo' ? 'Marcar en progreso' : 'Marcar como hecho'}
@@ -1567,11 +1773,10 @@ export const AdminDashboard = () => {
                         <div className="flex justify-between items-center mt-2">
                           <p className="text-text-dim text-[10px] uppercase tracking-widest">Asignado: {task.assignedTo || 'Sin asignar'}</p>
                           {task.dueDate && (
-                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${
-                              new Date(task.dueDate).getTime() - new Date().getTime() < 2 * 24 * 60 * 60 * 1000 && status !== 'done'
+                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${new Date(task.dueDate).getTime() - new Date().getTime() < 2 * 24 * 60 * 60 * 1000 && status !== 'done'
                               ? 'bg-red-500/20 text-red-500 border-red-500/30 animate-pulse'
                               : 'bg-bg text-text-dim border-border'
-                            }`}>
+                              }`}>
                               {new Date(task.dueDate).toLocaleDateString()}
                             </span>
                           )}
@@ -1592,7 +1797,7 @@ export const AdminDashboard = () => {
                 <h1 className="text-3xl font-light tracking-tighter text-white uppercase">Editor de <span className="text-accent font-bold">Página</span></h1>
                 <p className="text-text-dim text-xs uppercase tracking-widest mt-2">Personaliza el contenido visual y textual sin código</p>
               </div>
-              <button 
+              <button
                 onClick={handleSaveConfig}
                 className="bg-accent text-black px-8 py-3 rounded-lg font-bold text-[10px] uppercase tracking-widest hover:bg-accent/90 transition-all flex items-center gap-2"
               >
@@ -1600,18 +1805,23 @@ export const AdminDashboard = () => {
               </button>
             </header>
 
+            {/* Editor de imágenes del banner de la calculadora */}
+            {(userRole === 'admin' || userRole === 'editor') && (
+              <AdminBannerEditor />
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Text & Content */}
               <div className="bg-panel p-8 rounded-2xl border border-border space-y-6">
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent flex items-center gap-2">
                   <FileText className="w-4 h-4" /> Contenido de Texto
                 </h3>
-                
+
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Título Principal (Hero)</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={pageConfig.heroTitle}
                       title="Título Principal (Hero)"
                       placeholder="Título principal"
@@ -1621,7 +1831,7 @@ export const AdminDashboard = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Subtítulo (Hero)</label>
-                    <textarea 
+                    <textarea
                       rows={3}
                       value={pageConfig.heroSubtitle}
                       title="Subtítulo (Hero)"
@@ -1632,8 +1842,8 @@ export const AdminDashboard = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Texto del Pie de Página</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={pageConfig.footerText}
                       title="Texto del Pie de Página"
                       placeholder="Texto del pie de página"
@@ -1644,8 +1854,8 @@ export const AdminDashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Email de Contacto</label>
-                      <input 
-                        type="email" 
+                      <input
+                        type="email"
                         value={pageConfig.contactEmail}
                         title="Email de Contacto"
                         placeholder="Correo electrónico"
@@ -1655,8 +1865,8 @@ export const AdminDashboard = () => {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Teléfono de Contacto</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={pageConfig.contactPhone}
                         title="Teléfono de Contacto"
                         placeholder="Teléfono"
@@ -1667,8 +1877,8 @@ export const AdminDashboard = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Dirección Física</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={pageConfig.contactAddress}
                       title="Dirección Física"
                       placeholder="Dirección física"
@@ -1678,7 +1888,7 @@ export const AdminDashboard = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Información de Cuenta Bancaria</label>
-                    <textarea 
+                    <textarea
                       value={pageConfig.bankAccountInfo}
                       onChange={(e) => setPageConfig({ ...pageConfig, bankAccountInfo: e.target.value })}
                       className="w-full bg-input border border-border rounded-lg px-4 py-3 text-sm text-white focus:ring-1 focus:ring-accent outline-none h-24"
@@ -1698,8 +1908,8 @@ export const AdminDashboard = () => {
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Imagen de Fondo (Hero URL)</label>
                     <div className="flex gap-4">
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={pageConfig.heroImage}
                         title="URL de la imagen principal"
                         placeholder="URL de la imagen principal"
@@ -1716,15 +1926,15 @@ export const AdminDashboard = () => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Color de Acento</label>
                       <div className="flex gap-2">
-                        <input 
-                          type="color" 
+                        <input
+                          type="color"
                           value={pageConfig.accentColor}
                           onChange={(e) => setPageConfig({ ...pageConfig, accentColor: e.target.value })}
                           className="w-10 h-10 bg-transparent border-none outline-none cursor-pointer"
                           title="Color de acento"
                         />
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={pageConfig.accentColor}
                           title="Código de color de acento"
                           placeholder="#000000"
@@ -1736,15 +1946,15 @@ export const AdminDashboard = () => {
                     <div className="space-y-2">
                       <label className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Color Primario (Fondo)</label>
                       <div className="flex gap-2">
-                        <input 
-                          type="color" 
+                        <input
+                          type="color"
                           value={pageConfig.primaryColor}
                           onChange={(e) => setPageConfig({ ...pageConfig, primaryColor: e.target.value })}
                           className="w-10 h-10 bg-transparent border-none outline-none cursor-pointer"
                           title="Color primario"
                         />
-                        <input 
-                          type="text" 
+                        <input
+                          type="text"
                           value={pageConfig.primaryColor}
                           title="Código de color primario"
                           placeholder="#000000"
@@ -1759,15 +1969,17 @@ export const AdminDashboard = () => {
                 <div className="pt-4">
                   <div className="p-4 bg-bg rounded-xl border border-border">
                     <p className="text-[10px] text-text-dim uppercase tracking-widest mb-2">Vista Previa de Estilo</p>
-                    <div className="flex gap-2" style={{ '--color-primary-preview': pageConfig.primaryColor, '--color-accent-preview': pageConfig.accentColor } as React.CSSProperties}>
+                    <div className="flex gap-2">
                       <div
                         className="w-full h-8 rounded border border-border"
+                        style={{ backgroundColor: pageConfig.primaryColor }}
                         aria-label="Color primario"
                         title={pageConfig.primaryColor}
                         tabIndex={0}
                       ></div>
                       <div
                         className="w-full h-8 rounded border border-border"
+                        style={{ backgroundColor: pageConfig.accentColor }}
                         aria-label="Color acento"
                         title={pageConfig.accentColor}
                         tabIndex={0}
@@ -1782,6 +1994,150 @@ export const AdminDashboard = () => {
 
         {activeTab === 'usuarios' && (
           <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Tabla de comprobantes validados (control) */}
+            <section className="space-y-6">
+              <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-accent flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" /> Comprobantes Validados (Control)
+              </h2>
+              {/* Filtros y exportación */}
+              <div className="flex flex-wrap gap-4 items-center mb-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-text-dim mb-1">Usuario</label>
+                  <select value={filterUser} onChange={e => setFilterUser(e.target.value)} className="bg-input border border-border rounded-lg px-2 py-1 text-xs text-white" title="Filtrar por usuario">
+                    <option value="">Todos</option>
+                    {uniqueUsers.map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-text-dim mb-1">Producto</label>
+                  <select value={filterProduct} onChange={e => setFilterProduct(e.target.value)} className="bg-input border border-border rounded-lg px-2 py-1 text-xs text-white" title="Filtrar por producto">
+                    <option value="">Todos</option>
+                    {uniqueProducts.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-text-dim mb-1">Fecha</label>
+                  <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="bg-input border border-border rounded-lg px-2 py-1 text-xs text-white" title="Filtrar por fecha" placeholder="Fecha" />
+                </div>
+                <div className="flex gap-2 mt-6">
+                  <button onClick={handleExportControlCSV} className="bg-accent text-black px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-accent/90 transition-all flex items-center gap-2" title="Exportar CSV"><Download className="w-4 h-4" />CSV</button>
+                  <button onClick={handleExportControlPDF} className="bg-accent text-black px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-accent/90 transition-all flex items-center gap-2" title="Exportar PDF"><Download className="w-4 h-4" />PDF</button>
+                </div>
+              </div>
+              <div className="bg-panel rounded-2xl border border-border overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-border bg-bg/50">
+                      <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-text-dim">Usuario</th>
+                      <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-text-dim">Producto</th>
+                      <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-text-dim">Imagen</th>
+                      <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-text-dim">Fecha</th>
+                      <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-text-dim text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {filteredControls.map((ctrl) => (
+                      <tr key={ctrl.id} className="hover:bg-white/5 transition-colors">
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-bold text-white">{ctrl.userName}</p>
+                          <p className="text-[10px] text-text-dim">{ctrl.userId}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-accent font-medium">{ctrl.productName}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {ctrl.imageBase64 && (
+                            <img src={ctrl.imageBase64} alt="Comprobante" className="w-16 h-16 object-contain border border-border rounded-lg" />
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-[10px] text-text-dim">
+                          {ctrl.validatedAt ? new Date(ctrl.validatedAt).toLocaleString() : 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-right flex gap-2 justify-end">
+                          <button
+                            className="p-2 hover:bg-accent/10 text-accent rounded-lg transition-all"
+                            title="Editar"
+                            aria-label="Editar"
+                            onClick={() => setEditingControl(ctrl)}
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                          <button
+                            className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg transition-all"
+                            title="Eliminar"
+                            aria-label="Eliminar"
+                            onClick={() => handleDeleteControl(ctrl.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredControls.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center text-text-dim italic text-xs">
+                          No hay comprobantes validados con los filtros seleccionados.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {/* Formulario de edición */}
+              {editingControl && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                  <div className="bg-panel p-8 rounded-2xl border border-accent/30 w-full max-w-md relative animate-in fade-in slide-in-from-top-4">
+                    <button onClick={() => setEditingControl(null)} className="absolute top-4 right-4 text-text-dim hover:text-white" title="Cerrar edición" aria-label="Cerrar edición">
+                      <XCircle className="w-5 h-5" />
+                    </button>
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-accent mb-6">Editar Comprobante Validado</h3>
+                    <form onSubmit={handleUpdateControl} className="space-y-4">
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-text-dim mb-2">Usuario</label>
+                        <input
+                          type="text"
+                          value={editingControl.userName}
+                          onChange={e => setEditingControl({ ...editingControl, userName: e.target.value })}
+                          className="w-full bg-input border border-border rounded-lg px-4 py-2 text-sm text-white outline-none focus:border-accent"
+                          required
+                          title="Nombre de usuario"
+                          placeholder="Nombre de usuario"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-text-dim mb-2">Producto</label>
+                        <input
+                          type="text"
+                          value={editingControl.productName}
+                          onChange={e => setEditingControl({ ...editingControl, productName: e.target.value })}
+                          className="w-full bg-input border border-border rounded-lg px-4 py-2 text-sm text-white outline-none focus:border-accent"
+                          required
+                          title="Nombre del producto"
+                          placeholder="Nombre del producto"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase font-bold text-text-dim mb-2">Imagen (Base64)</label>
+                        <textarea
+                          value={editingControl.imageBase64}
+                          onChange={e => setEditingControl({ ...editingControl, imageBase64: e.target.value })}
+                          className="w-full bg-input border border-border rounded-lg px-4 py-2 text-xs text-white outline-none focus:border-accent h-20"
+                          title="Imagen en base64"
+                          placeholder="Pega aquí la imagen en base64"
+                          aria-label="Imagen en base64"
+                        />
+                        {editingControl.imageBase64 && (
+                          <img src={editingControl.imageBase64} alt="Preview" className="w-24 h-24 object-contain border border-border rounded-lg mt-2" />
+                        )}
+                      </div>
+                      <button type="submit" className="w-full bg-accent text-black py-3 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-accent/90 transition-all">
+                        Guardar Cambios
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </section>
             <header>
               <h1 className="text-3xl font-light tracking-tighter text-white uppercase">Gestión de <span className="text-accent font-bold">Usuarios y Pagos</span></h1>
               <p className="text-text-dim text-xs uppercase tracking-widest mt-2">Valida comprobantes y monitorea la actividad de tus clientes</p>
@@ -1798,9 +2154,9 @@ export const AdminDashboard = () => {
                     <div key={receipt.id} className="bg-panel rounded-2xl border border-accent/30 overflow-hidden flex flex-col shadow-lg shadow-accent/5">
                       <div className="h-48 relative group">
                         <img src={receipt.receiptImageUrl} alt="Comprobante" className="w-full h-full object-cover" />
-                        <a 
-                          href={receipt.receiptImageUrl} 
-                          target="_blank" 
+                        <a
+                          href={receipt.receiptImageUrl}
+                          target="_blank"
                           rel="noreferrer"
                           className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-white text-[10px] font-bold uppercase tracking-widest"
                         >
@@ -1817,13 +2173,13 @@ export const AdminDashboard = () => {
                           <p className="text-sm text-accent font-bold">{receipt.productName}</p>
                         </div>
                         <div className="flex gap-2 pt-4">
-                          <button 
+                          <button
                             onClick={() => handleApprovePayment(receipt)}
                             className="flex-1 bg-green-600 text-white py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-green-700 transition-all flex items-center justify-center gap-2"
                           >
                             <Check className="w-4 h-4" /> Aprobar
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleRejectPayment(receipt)}
                             className="flex-1 bg-red-600/10 text-red-500 border border-red-500/20 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center justify-center gap-2"
                           >
@@ -1865,9 +2221,8 @@ export const AdminDashboard = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded border ${
-                            user.role === 'admin' ? 'bg-accent/10 text-accent border-accent/20' : 'bg-bg text-text-dim border-border'
-                          }`}>
+                          <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded border ${user.role === 'admin' ? 'bg-accent/10 text-accent border-accent/20' : 'bg-bg text-text-dim border-border'
+                            }`}>
                             {user.role}
                           </span>
                         </td>
@@ -1985,9 +2340,8 @@ export const AdminDashboard = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded border ${
-                          user.role === 'admin' ? 'bg-accent/10 text-accent border-accent/20' : 'bg-bg text-text-dim border-border'
-                        }`}>
+                        <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded border ${user.role === 'admin' ? 'bg-accent/10 text-accent border-accent/20' : 'bg-bg text-text-dim border-border'
+                          }`}>
                           {user.role}
                         </span>
                       </td>
@@ -2040,7 +2394,7 @@ export const AdminDashboard = () => {
                   <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-accent flex items-center gap-2">
                     <Package className="w-4 h-4" /> Productos Digitales
                   </h2>
-                  <button 
+                  <button
                     title="Agregar nuevo servicio"
                     aria-label="Agregar nuevo servicio"
                     onClick={() => {
@@ -2061,7 +2415,7 @@ export const AdminDashboard = () => {
                         <input
                           type="text"
                           value={editingProduct ? editingProduct.name : newProduct.name}
-                          onChange={(e) => editingProduct 
+                          onChange={(e) => editingProduct
                             ? setEditingProduct({ ...editingProduct, name: e.target.value })
                             : setNewProduct({ ...newProduct, name: e.target.value })}
                           className="w-full bg-bg border border-border rounded-lg px-4 py-2 text-sm text-white outline-none focus:border-accent"
@@ -2107,16 +2461,16 @@ export const AdminDashboard = () => {
                       />
                       {(editingProduct?.image || newProduct.image) && (
                         <div className="mt-4 rounded-lg overflow-hidden border border-border h-32 bg-bg/50">
-                          <img 
-                            src={editingProduct ? editingProduct.image : newProduct.image} 
-                            alt="Preview" 
+                          <img
+                            src={editingProduct ? editingProduct.image : newProduct.image}
+                            alt="Preview"
                             className="w-full h-full object-contain"
                             onError={(e) => (e.currentTarget.src = 'https://via.placeholder.com/400x200?text=Imagen+No+Válida')}
                           />
                         </div>
                       )}
                     </div>
-                    <button 
+                    <button
                       type="submit"
                       className="w-full bg-accent text-black py-3 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-accent/90 transition-all"
                     >
@@ -2132,7 +2486,7 @@ export const AdminDashboard = () => {
                           <p className="text-[10px] text-accent">Q. {prod.price.toLocaleString()}</p>
                         </div>
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
+                          <button
                             title="Editar servicio"
                             aria-label="Editar servicio"
                             onClick={() => setEditingProduct(prod)}
@@ -2140,7 +2494,7 @@ export const AdminDashboard = () => {
                           >
                             <FileText className="w-4 h-4" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDeleteProduct(prod.id)}
                             className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
                             title="Eliminar producto"
@@ -2161,7 +2515,7 @@ export const AdminDashboard = () => {
                   <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-accent flex items-center gap-2">
                     <ShoppingBag className="w-4 h-4" /> Servicios de Obra
                   </h2>
-                  <button 
+                  <button
                     title="Agregar nuevo producto"
                     aria-label="Agregar nuevo producto"
                     onClick={() => {
@@ -2182,7 +2536,7 @@ export const AdminDashboard = () => {
                         <input
                           type="text"
                           value={editingService ? editingService.title : newService.title}
-                          onChange={(e) => editingService 
+                          onChange={(e) => editingService
                             ? setEditingService({ ...editingService, title: e.target.value })
                             : setNewService({ ...newService, title: e.target.value })}
                           className="w-full bg-bg border border-border rounded-lg px-4 py-2 text-sm text-white outline-none focus:border-accent"
@@ -2226,7 +2580,7 @@ export const AdminDashboard = () => {
                         placeholder="Información exhaustiva sobre el servicio..."
                       />
                     </div>
-                    <button 
+                    <button
                       type="submit"
                       className="w-full bg-accent text-black py-3 rounded-lg font-bold text-xs uppercase tracking-widest hover:bg-accent/90 transition-all"
                     >
@@ -2242,7 +2596,7 @@ export const AdminDashboard = () => {
                           <p className="text-[10px] text-accent">Desde Q. {serv.price.toLocaleString()}</p>
                         </div>
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
+                          <button
                             title="Editar producto"
                             aria-label="Editar producto"
                             onClick={() => setEditingService(serv)}
@@ -2250,7 +2604,7 @@ export const AdminDashboard = () => {
                           >
                             <FileText className="w-4 h-4" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDeleteService(serv.id)}
                             className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg"
                             title="Eliminar servicio"
@@ -2292,7 +2646,7 @@ export const AdminDashboard = () => {
                       <div className="flex gap-3 overflow-x-auto pb-2 items-center">
                         {auth.currentUser?.photoURL && (
                           <div className="flex flex-col items-center gap-1">
-                            <button 
+                            <button
                               onClick={() => setAdminAvatar(auth.currentUser!.photoURL!)}
                               className={`w-10 h-10 rounded-full border-2 transition-all shrink-0 overflow-hidden ${adminAvatar === auth.currentUser.photoURL ? 'border-accent scale-110' : 'border-border opacity-50'}`}
                             >
@@ -2303,7 +2657,7 @@ export const AdminDashboard = () => {
                         )}
                         {['admin', 'support', 'engineer', 'architect'].map(seed => (
                           <div key={seed} className="flex flex-col items-center gap-1">
-                            <button 
+                            <button
                               onClick={() => setAdminAvatar(`https://api.dicebear.com/7.x/bottts/svg?seed=${seed}`)}
                               className={`w-10 h-10 rounded-full border-2 transition-all shrink-0 ${adminAvatar.includes(seed) ? 'border-accent scale-110' : 'border-border opacity-50'}`}
                             >
@@ -2382,7 +2736,7 @@ export const AdminDashboard = () => {
                           <span className="text-sm font-bold text-accent">Q. {lead.estimatedTotal?.toLocaleString()}</span>
                         </td>
                         <td className="px-6 py-4">
-                          <button 
+                          <button
                             onClick={() => window.open(`https://wa.me/${lead.phone.replace(/\D/g, '')}`, '_blank')}
                             className="p-2 hover:bg-accent/10 text-accent rounded-lg transition-colors"
                             title="Contactar por WhatsApp"
