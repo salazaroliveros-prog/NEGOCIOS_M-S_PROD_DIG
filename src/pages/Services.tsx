@@ -83,7 +83,7 @@ export const ServicesPage = () => {
         <header className="mb-12">
           <h1 className="text-4xl md:text-5xl font-light tracking-tight text-white uppercase">
             Servicios de <br />
-            <span className="text-accent font-bold">Ingeniería Civil</span>
+            <span className="text-accent font-bold">Ejecución</span>
           </h1>
           <p className="mt-4 text-text-dim max-w-2xl font-medium border-l-2 border-border pl-4">
             Ejecución magistral y supervisión técnica para proyectos de cualquier escala.

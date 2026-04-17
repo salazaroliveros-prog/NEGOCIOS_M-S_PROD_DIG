@@ -1,3 +1,6 @@
+    match /payment_receipts_control/{docId} {
+      allow read, write: if isAdmin();
+    }
 // ===============================================================
 // Assumed Data Model
 // ===============================================================

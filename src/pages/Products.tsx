@@ -1,4 +1,5 @@
 import React from 'react';
+import { CalculatorBanner } from '../components/CalculatorBanner';
 import { motion } from 'motion/react';
 import { ShoppingCart, Download, ExternalLink, Check, Upload, CreditCard, Clock, MessageSquare } from 'lucide-react';
 import { DIGITAL_PRODUCTS } from '../constants/data';
@@ -9,6 +10,20 @@ import { useNavigate } from 'react-router-dom';
 
 export const ProductsPage = () => {
   const [user, setUser] = React.useState<any>(null);
+  // Nuevo estado para modal de renders
+  const [showRendersModal, setShowRendersModal] = React.useState(false);
+  const [renders, setRenders] = React.useState<any[]>([]); // [{url,label}]
+  const [selectedRendersProduct, setSelectedRendersProduct] = React.useState<any>(null);
+
+  // Simulación: obtener renders por producto (en real, usar Firestore o similar)
+  const getRendersForProduct = (productId: string) => {
+    // Aquí deberías obtener los renders de la base de datos por producto
+    // Por ahora, demo con imágenes por defecto
+    return [
+      { url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=800', label: 'Render Interior' },
+      { url: 'https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&q=80&w=800', label: 'Render Exterior' }
+    ];
+  };
   const [purchasedIds, setPurchasedIds] = React.useState<string[]>([]);
   const [pendingReceipts, setPendingReceipts] = React.useState<string[]>([]);
   const [selectedProduct, setSelectedProduct] = React.useState<any>(null);
@@ -99,6 +114,8 @@ export const ProductsPage = () => {
       navigate('/login');
       return;
     }
+    setShowRendersModal(false); // Cierra modal de renders si está abierto
+    setSelectedRendersProduct(null);
     setSelectedProduct(product);
   };
 
@@ -134,7 +151,13 @@ export const ProductsPage = () => {
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=800';
                   }}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-60"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 opacity-60 cursor-pointer"
+                  onClick={() => {
+                    setSelectedProduct(null); // Cierra modal de compra si está abierto
+                    setSelectedRendersProduct(product);
+                    setRenders(getRendersForProduct(product.id));
+                    setShowRendersModal(true);
+                  }}
                 />
                 <div className="absolute top-4 left-4 flex gap-2">
                   <div className="bg-gold/20 backdrop-blur-sm px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest text-gold border border-gold/30">
@@ -238,122 +261,31 @@ export const ProductsPage = () => {
           ))}
         </div>
 
-        {/* Payment Modal */}
-        {selectedProduct && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        {/* Modal flotante de renders fuera del map */}
+        {showRendersModal && selectedRendersProduct && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-panel max-w-lg w-full rounded-2xl border border-border overflow-hidden shadow-2xl"
+              className="bg-panel max-w-2xl w-full rounded-2xl border border-border overflow-hidden shadow-2xl relative"
             >
+              <button
+                onClick={() => setShowRendersModal(false)}
+                className="absolute top-4 right-4 text-text-dim hover:text-white transition-colors z-10"
+                title="Cerrar"
+                aria-label="Cerrar"
+              >
+                <span className="text-3xl font-bold">&times;</span>
+              </button>
               <div className="p-8 space-y-6">
-                <header className="flex justify-between items-start">
-                  <div>
-                    <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Proceso de <span className="text-accent">Adquisición</span></h2>
-                    <p className="text-text-dim text-xs uppercase tracking-widest mt-1">{selectedProduct.name}</p>
-                  </div>
-                  <button
-                    onClick={() => setSelectedProduct(null)}
-                    className="text-text-dim hover:text-white transition-colors"
-                    title="Cerrar detalles"
-                    aria-label="Cerrar detalles"
-                  >
-                    <ExternalLink className="w-6 h-6 rotate-45" />
-                  </button>
-
-                  export default ProductsPage;
-                </header>
-
-                <div className="bg-bg p-6 rounded-xl border border-border space-y-4">
-                  <div className="flex items-center gap-3 text-accent">
-                    <CreditCard className="w-5 h-5" />
-                    <h3 className="text-[10px] font-bold uppercase tracking-widest">Datos de Transferencia</h3>
-                  </div>
-                  <p className="text-sm text-white font-mono leading-relaxed bg-panel p-4 rounded-lg border border-border/50">
-                    {bankInfo}
-                  </p>
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-[10px] uppercase font-bold text-text-dim">Monto a depositar</span>
-                    <span className="text-lg font-bold text-accent">Q. {selectedProduct.price.toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 text-accent">
-                    <Upload className="w-5 h-5" />
-                    <h3 className="text-[10px] font-bold uppercase tracking-widest">Adjuntar Boleta de Pago</h3>
-                  </div>
-
-                  <div className="space-y-4">
-                    {!receiptUrl ? (
-                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-accent/50 hover:bg-accent/5 transition-all group">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <Upload className="w-8 h-8 text-text-dim group-hover:text-accent mb-2 transition-colors" />
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-text-dim group-hover:text-accent">Haga clic para subir imagen</p>
-                          <p className="text-[8px] text-text-dim mt-1">PNG, JPG o JPEG (Máx. 1MB)</p>
-                        </div>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              if (file.size > 1024 * 1024) {
-                                alert('La imagen es demasiado grande. Máximo 1MB.');
-                                return;
-                              }
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                setReceiptUrl(reader.result as string);
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                      </label>
-                    ) : (
-                      <div className="relative group rounded-xl overflow-hidden border border-border h-48">
-                        <img src={receiptUrl} alt="Receipt Preview" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                          <button
-                            title="Agregar al carrito"
-                            aria-label="Agregar al carrito"
-                            onClick={() => setReceiptUrl('')}
-                            className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-all"
-                          >
-                            <ExternalLink className="w-4 h-4 rotate-45" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-border"></span>
-                      </div>
-                      <div className="relative flex justify-center text-[8px] uppercase font-bold tracking-[0.3em]">
-                        <span className="bg-panel px-2 text-text-dim">O usa una URL</span>
-                      </div>
-                    </div>
-
-                    <input
-                      type="text"
-                      value={receiptUrl.startsWith('data:') ? '' : receiptUrl}
-                      onChange={(e) => setReceiptUrl(e.target.value)}
-                      placeholder="https://..."
-                      className="w-full bg-input border border-border rounded-lg px-4 py-2 text-[10px] text-white focus:ring-1 focus:ring-accent outline-none"
-                    />
-                  </div>
-                </div>
-
+                <h2 className="text-2xl font-bold text-white uppercase tracking-tight mb-2">Galería de Renders</h2>
+                <p className="text-text-dim text-xs uppercase tracking-widest mb-4">{selectedRendersProduct.name}</p>
+                <CalculatorBanner images={renders} />
                 <button
-                  onClick={handleUploadReceipt}
-                  disabled={!receiptUrl || isUploading}
-                  className="w-full py-4 bg-accent text-black rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-accent/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  onClick={() => { setShowRendersModal(false); navigate('/calculadora'); }}
+                  className="w-full py-4 bg-accent text-black rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-accent/90 transition-all flex items-center justify-center gap-2 mt-4"
                 >
-                  {isUploading ? <Clock className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  {isUploading ? 'Enviando...' : 'Enviar para Validación'}
+                  Calcular con tus m2 disponibles
                 </button>
               </div>
             </motion.div>

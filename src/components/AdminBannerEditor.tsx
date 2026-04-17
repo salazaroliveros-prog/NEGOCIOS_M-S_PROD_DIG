@@ -7,11 +7,22 @@ export const AdminBannerEditor: React.FC = () => {
     const [saving, setSaving] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
 
+    const fetchImages = () => {
+        setLoading(true);
+        setError(null);
+        getCalculatorBannerImages()
+            .then(imgs => {
+                setImages(imgs);
+                setLoading(false);
+            })
+            .catch((e) => {
+                setError('Error al cargar imágenes del banner: ' + (e?.message || e));
+                setLoading(false);
+            });
+    };
+
     React.useEffect(() => {
-        getCalculatorBannerImages().then(imgs => {
-            setImages(imgs);
-            setLoading(false);
-        });
+        fetchImages();
     }, []);
 
 
@@ -43,23 +54,42 @@ export const AdminBannerEditor: React.FC = () => {
 
     if (loading) return <div className="p-4">Cargando imágenes del banner...</div>;
 
+    if (error) {
+        return (
+            <div className="p-4">
+                <div className="text-red-500 mb-2">{error}</div>
+                <button
+                    onClick={fetchImages}
+                    className="bg-gold text-black font-bold px-6 py-2 rounded-lg mt-2 hover:bg-gold/90 transition-all"
+                >
+                    Reintentar
+                </button>
+            </div>
+        );
+    }
+
     return (
         <div className="bg-panel p-6 rounded-xl border border-border mb-8">
             <h2 className="text-lg font-bold mb-4 text-accent">Editar imágenes del banner de tipos de obra</h2>
             {images.map((img, idx) => (
                 <div key={idx} className="flex flex-col md:flex-row gap-4 mb-4 items-center">
-                    <input
-                        type="file"
-                        accept="image/*"
-                        onChange={e => handleFileChange(idx, e.target.files?.[0] || null)}
-                        className="w-48 text-xs text-white"
-                    />
+                    <label className="w-48 text-xs text-white" htmlFor={`banner-file-${idx}`}>Imagen
+                        <input
+                            id={`banner-file-${idx}`}
+                            type="file"
+                            accept="image/*"
+                            title="Selecciona una imagen para el banner"
+                            onChange={e => handleFileChange(idx, e.target.files?.[0] || null)}
+                            className="block mt-1"
+                        />
+                    </label>
                     <input
                         type="text"
                         value={img.label}
                         onChange={e => handleChange(idx, 'label', e.target.value)}
                         className="w-32 bg-input border border-border rounded-lg px-3 py-2 text-xs text-white"
                         placeholder="Etiqueta"
+                        title="Etiqueta de la imagen"
                     />
                     <img src={img.url} alt={img.label} className="w-24 h-16 object-cover rounded border border-border" />
                 </div>

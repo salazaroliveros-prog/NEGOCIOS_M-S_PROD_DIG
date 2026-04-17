@@ -1,13 +1,13 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, X, Send, Bot, Check, Clock, Settings } from 'lucide-react';
-import { 
-  collection, 
-  addDoc, 
-  onSnapshot, 
-  query, 
-  orderBy, 
-  serverTimestamp, 
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp,
   Timestamp,
   doc,
   setDoc,
@@ -107,7 +107,7 @@ export const ChatWidget = () => {
           sender: 'system',
           isSystem: true,
           timestamp: serverTimestamp()
-        }).catch(() => {});
+        }).catch(() => { });
       }).catch((error) => {
         handleFirestoreError(error, OperationType.WRITE, `chats/${newChatId}`);
       });
@@ -147,10 +147,16 @@ export const ChatWidget = () => {
             newUnread++;
             if (!isOpen) {
               // Play sound if chat is closed
-              audioRef.current?.play().catch(() => {});
+              audioRef.current?.play().catch(() => { });
             }
-            updateDoc(doc(db, 'chats', chatId, 'messages', msg.id), { read: true })
-              .catch(err => handleFirestoreError(err, OperationType.UPDATE, `chats/${chatId}/messages/${msg.id}`));
+            // Verificar existencia antes de updateDoc
+            const messageRef = doc(db, 'chats', chatId, 'messages', msg.id);
+            getDoc(messageRef).then((docSnap) => {
+              if (docSnap.exists()) {
+                updateDoc(messageRef, { read: true })
+                  .catch(err => handleFirestoreError(err, OperationType.UPDATE, `chats/${chatId}/messages/${msg.id}`));
+              }
+            });
           }
         }
       });
@@ -164,15 +170,15 @@ export const ChatWidget = () => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setAdminTyping(data.adminTyping);
-        
+
         // Auto-close logic: if active and inactive for > 30 mins
         if (data.status === 'active' && data.lastActivity) {
           const lastAct = (data.lastActivity as Timestamp).toDate();
           const now = new Date();
           const diffMins = (now.getTime() - lastAct.getTime()) / (1000 * 60);
-          
+
           if (diffMins > 30) {
-            updateDoc(doc(db, 'chats', chatId), { 
+            updateDoc(doc(db, 'chats', chatId), {
               status: 'closed',
               closedReason: 'inactivity'
             }).catch(err => handleFirestoreError(err, OperationType.UPDATE, `chats/${chatId}`));
@@ -182,10 +188,10 @@ export const ChatWidget = () => {
               sender: 'admin',
               isSystem: true,
               timestamp: serverTimestamp()
-            }).catch(() => {});
+            }).catch(() => { });
           }
         }
-        
+
         if (data.status === 'closed') {
           setChatStatus('closed');
         } else {
@@ -305,7 +311,7 @@ export const ChatWidget = () => {
                   <div className="flex gap-3 overflow-x-auto pb-2 items-center">
                     {user?.photoURL && (
                       <div className="flex flex-col items-center gap-1">
-                        <button 
+                        <button
                           onClick={() => {
                             const url = user.photoURL;
                             setUserAvatar(url);
@@ -324,7 +330,7 @@ export const ChatWidget = () => {
                     )}
                     {['visitor', 'Felix', 'Aneka', 'Spooky', 'Tigger'].map(seed => (
                       <div key={seed} className="flex flex-col items-center gap-1">
-                        <button 
+                        <button
                           onClick={() => {
                             const url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
                             setUserAvatar(url);
@@ -343,18 +349,18 @@ export const ChatWidget = () => {
                     ))}
                   </div>
                 </div>
-                
+
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-accent mb-2">URL Personalizada</p>
                   <div className="flex gap-2">
-                    <input 
+                    <input
                       type="text"
                       value={customAvatarUrl}
                       onChange={(e) => setCustomAvatarUrl(e.target.value)}
                       placeholder="https://..."
                       className="flex-1 bg-input border border-border rounded px-2 py-1 text-[10px] text-white outline-none"
                     />
-                    <button 
+                    <button
                       onClick={() => {
                         if (customAvatarUrl) {
                           if (!validateImageUrl(customAvatarUrl)) {
@@ -393,7 +399,7 @@ export const ChatWidget = () => {
                 <div className="bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-center">
                   <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest">Sesión Finalizada</p>
                   <p className="text-[9px] text-text-dim mt-1">Esta conversación ha sido cerrada por inactividad o por un asesor.</p>
-                  <button 
+                  <button
                     onClick={() => {
                       localStorage.removeItem('construms_chat_id');
                       setChatId(null);
@@ -418,20 +424,19 @@ export const ChatWidget = () => {
                   className={`flex gap-2 ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'} ${msg.isSystem ? 'justify-center' : ''}`}
                 >
                   {!msg.isSystem && (
-                    <img 
-                      src={msg.sender === 'user' ? (msg.senderAvatar || userAvatar) : (msg.senderAvatar || adminAvatar)} 
-                      alt="Avatar" 
+                    <img
+                      src={msg.sender === 'user' ? (msg.senderAvatar || userAvatar) : (msg.senderAvatar || adminAvatar)}
+                      alt="Avatar"
                       className="w-6 h-6 rounded-full bg-panel border border-border shrink-0 mt-1"
                     />
                   )}
                   <div
-                    className={`max-w-[75%] p-3 rounded-xl text-sm ${
-                      msg.isSystem
+                    className={`max-w-[75%] p-3 rounded-xl text-sm ${msg.isSystem
                         ? 'bg-accent/10 border border-accent/20 text-accent text-[9px] font-bold uppercase tracking-[0.2em] text-center w-full py-2 px-4 rounded-full'
                         : msg.sender === 'user'
                           ? 'bg-accent text-black rounded-tr-none'
                           : 'bg-panel border border-border text-text rounded-tl-none'
-                    }`}
+                      }`}
                   >
                     {msg.text}
                     {!msg.isSystem && (

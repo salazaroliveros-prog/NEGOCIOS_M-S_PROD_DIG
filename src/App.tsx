@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Home } from './pages/Home';
 import { CalculatorPage } from './pages/Calculator';
-import { ProductsPage } from './pages/Products';
+import ProductsPage from './pages/Products';
 import { ServicesPage } from './pages/Services';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { LoginPage } from './pages/Login';
@@ -35,7 +35,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/perfil" element={<UserProfile />} />
           </Routes>
-          
+
           <ChatWidget />
           <FloatingActionButton />
 

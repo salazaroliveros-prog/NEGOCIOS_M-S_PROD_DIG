@@ -8,12 +8,17 @@ import { Testimonials } from '../components/Testimonials';
 import { SuccessCases } from '../components/SuccessCases';
 import { Hero } from '../components/Hero';
 import { AdminEditBar } from '../components/AdminEditBar';
+import { AdminBannerEditor } from '../components/AdminBannerEditor';
+import { CalculatorBanner } from '../components/CalculatorBanner';
+import { getCalculatorBannerImages, BannerImage } from '../lib/calculatorBannerConfig';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 
 export const Home = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
+  const [bannerImages, setBannerImages] = useState<BannerImage[]>([]);
+  const [bannerLoading, setBannerLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -31,6 +36,14 @@ export const Home = () => {
     return () => unsubscribe();
   }, []);
 
+  // Cargar imágenes del banner público
+  useEffect(() => {
+    setBannerLoading(true);
+    getCalculatorBannerImages()
+      .then((imgs) => setBannerImages(imgs))
+      .finally(() => setBannerLoading(false));
+  }, []);
+
   return (
     <div className="flex flex-col bg-bg">
       {/* Botón para activar modo edición solo para admin */}
@@ -45,13 +58,25 @@ export const Home = () => {
 
       {/* Barra flotante solo si admin y modo edición activo */}
       {userRole === 'admin' && editMode && (
-        <AdminEditBar
-          onOpenPalette={() => alert('Editar paleta de colores (demo)')}
-          onOpenImages={() => alert('Editar imágenes (demo)')}
-          onOpenTexts={() => alert('Editar textos (demo)')}
-          onOpenEffects={() => alert('Editar efectos visuales (demo)')}
-          onSave={() => alert('Guardar cambios (demo)')}
-        />
+        <>
+          <AdminEditBar
+            onOpenPalette={() => alert('Editar paleta de colores (demo)')}
+            onOpenImages={() => alert('Editar imágenes (demo)')}
+            onOpenTexts={() => alert('Editar textos (demo)')}
+            onOpenEffects={() => alert('Editar efectos visuales (demo)')}
+            onSave={() => alert('Guardar cambios (demo)')}
+          />
+          <div className="max-w-4xl mx-auto w-full mt-8">
+            <AdminBannerEditor />
+          </div>
+        </>
+      )}
+
+      {/* Banner público de la Home */}
+      {bannerLoading ? (
+        <div className="w-full flex justify-center items-center py-12">Cargando banner...</div>
+      ) : (
+        <CalculatorBanner images={bannerImages} />
       )}
 
       {/* Hero Section */}
