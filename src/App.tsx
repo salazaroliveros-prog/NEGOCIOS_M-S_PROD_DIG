@@ -42,7 +42,7 @@ export default function App() {
           <footer className="bg-panel text-white py-12 px-8 border-t border-border">
             <div className="max-w-7xl mx-auto space-y-8">
               <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-                <div className="text-lg font-bold tracking-tighter uppercase text-accent">CONSTRUM&S</div>
+                <div className="text-lg font-bold tracking-tighter uppercase text-accent">CONSTRUCTORA WM/M&S</div>
                 <div className="flex flex-wrap justify-center gap-8 text-[10px] uppercase tracking-widest text-text-dim">
                   <a href={`mailto:${config.contactEmail}`} className="hover:text-accent transition-colors">{config.contactEmail}</a>
                   <a href={`tel:${config.contactPhone}`} className="hover:text-accent transition-colors">{config.contactPhone}</a>

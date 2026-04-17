@@ -13,6 +13,7 @@ export interface PageConfig {
   contactPhone: string;
   contactAddress: string;
   bankAccountInfo: string;
+  carouselImages?: string[];
 }
 
 const DEFAULT_CONFIG: PageConfig = {

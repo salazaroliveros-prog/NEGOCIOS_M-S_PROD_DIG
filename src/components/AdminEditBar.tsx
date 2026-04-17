@@ -21,13 +21,9 @@ export const AdminEditBar: React.FC<AdminEditBarProps> = ({ onOpenPalette, onOpe
         id: 'admin-edit-bar',
     });
 
-    const style: React.CSSProperties = {
-        position: 'fixed',
-        left: position.x + (transform?.x || 0),
-        top: position.y + (transform?.y || 0),
-        zIndex: 9999,
-        touchAction: 'none',
-    };
+    // Usar clases CSS para la posición, actualizando mediante clases dinámicas
+    const left = position.x + (transform?.x || 0);
+    const top = position.y + (transform?.y || 0);
 
     // Actualizar la posición final al soltar
     const handleDragEnd = (event: any) => {
@@ -39,8 +35,13 @@ export const AdminEditBar: React.FC<AdminEditBarProps> = ({ onOpenPalette, onOpe
 
     return (
         <DndContext onDragEnd={handleDragEnd}>
-            <div ref={setNodeRef} style={style} className="admin-edit-bar">
-                <div className="admin-edit-bar-title" style={{ cursor: 'move' }} {...listeners} {...attributes}>Panel de Edición</div>
+            <div
+                ref={setNodeRef}
+                className="admin-edit-bar"
+                data-left={left}
+                data-top={top}
+            >
+                <div className="admin-edit-bar-title" {...listeners} {...attributes}>Panel de Edición</div>
                 <button onClick={onOpenPalette} className="admin-edit-bar-btn">Paleta de Colores</button>
                 <button onClick={onOpenImages} className="admin-edit-bar-btn">Imágenes</button>
                 <button onClick={onOpenTexts} className="admin-edit-bar-btn">Textos</button>

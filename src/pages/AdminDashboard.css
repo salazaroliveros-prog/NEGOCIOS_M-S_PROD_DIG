@@ -1,0 +1,7 @@
+/* Colores dinámicos para previsualización en AdminDashboard */
+.color-preview-primary {
+  background-color: var(--color-preview-primary, #0A0A0A);
+}
+.color-preview-accent {
+  background-color: var(--color-preview-accent, #EAB308);
+}

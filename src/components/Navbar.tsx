@@ -45,7 +45,7 @@ export const Navbar = () => {
           <div className="flex items-center">
             <Link to="/" className="flex items-center gap-2">
               <Layout className="w-8 h-8 text-accent" />
-              <span className="text-xl font-bold tracking-tighter text-accent uppercase">CONSTRUM&S</span>
+              <span className="text-xl font-bold tracking-tighter text-accent uppercase">CONSTRUCTORA WM/M&S</span>
             </Link>
           </div>
 

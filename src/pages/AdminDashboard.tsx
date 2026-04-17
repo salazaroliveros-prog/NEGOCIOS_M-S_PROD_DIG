@@ -1811,6 +1811,95 @@ export const AdminDashboard = () => {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Editor de imágenes del carrusel */}
+              <div className="bg-panel p-8 rounded-2xl border border-border space-y-6">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4" /> Carrusel de Imágenes (Hero)
+                </h3>
+                <div className="space-y-4">
+                  {(pageConfig.carouselImages || []).length === 0 && (
+                    <p className="text-xs text-text-dim">No hay imágenes en el carrusel. Agrega al menos una URL.</p>
+                  )}
+                  {(pageConfig.carouselImages || []).map((img: string, idx: number) => (
+                    <div key={img + idx} className="flex items-center gap-4 mb-2">
+                      <div className="w-20 h-12 rounded-lg border border-border overflow-hidden bg-bg">
+                        <img src={img} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                      <input
+                        type="text"
+                        value={img}
+                        onChange={e => {
+                          const arr = [...(pageConfig.carouselImages || [])];
+                          arr[idx] = e.target.value;
+                          setPageConfig({ ...pageConfig, carouselImages: arr });
+                        }}
+                        className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-accent outline-none"
+                        placeholder="URL de imagen"
+                      />
+                      <button
+                        type="button"
+                        className="bg-red-500 text-white rounded-lg px-3 py-2 text-xs font-bold hover:bg-red-600 transition-all"
+                        onClick={() => {
+                          const arr = [...(pageConfig.carouselImages || [])];
+                          arr.splice(idx, 1);
+                          setPageConfig({ ...pageConfig, carouselImages: arr });
+                        }}
+                        title="Eliminar imagen"
+                      >Eliminar</button>
+                      <button
+                        type="button"
+                        className="bg-panel border border-border rounded-lg px-2 py-2 text-xs font-bold text-accent hover:bg-accent/10 transition-all disabled:opacity-30"
+                        onClick={() => {
+                          if (idx === 0) return;
+                          const arr = [...(pageConfig.carouselImages || [])];
+                          [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+                          setPageConfig({ ...pageConfig, carouselImages: arr });
+                        }}
+                        disabled={idx === 0}
+                        title="Subir"
+                      >↑</button>
+                      <button
+                        type="button"
+                        className="bg-panel border border-border rounded-lg px-2 py-2 text-xs font-bold text-accent hover:bg-accent/10 transition-all disabled:opacity-30"
+                        onClick={() => {
+                          if (idx === (pageConfig.carouselImages?.length || 0) - 1) return;
+                          const arr = [...(pageConfig.carouselImages || [])];
+                          [arr[idx + 1], arr[idx]] = [arr[idx], arr[idx + 1]];
+                          setPageConfig({ ...pageConfig, carouselImages: arr });
+                        }}
+                        disabled={idx === (pageConfig.carouselImages?.length || 0) - 1}
+                        title="Bajar"
+                      >↓</button>
+                    </div>
+                  ))}
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      const url = (e.target as any).elements.url.value.trim();
+                      if (!url) return;
+                      setPageConfig({
+                        ...pageConfig,
+                        carouselImages: [...(pageConfig.carouselImages || []), url]
+                      });
+                      (e.target as any).reset();
+                    }}
+                    className="flex gap-4 mt-2"
+                  >
+                    <input
+                      name="url"
+                      type="text"
+                      className="flex-1 bg-input border border-border rounded-lg px-3 py-2 text-xs text-white focus:ring-1 focus:ring-accent outline-none"
+                      placeholder="Nueva URL de imagen para el carrusel"
+                    />
+                    <button
+                      type="submit"
+                      className="bg-accent text-black rounded-lg px-4 py-2 text-xs font-bold hover:bg-accent/90 transition-all"
+                    >Agregar</button>
+                  </form>
+                </div>
+                <div className="pt-2 text-[10px] text-text-dim">Las imágenes deben ser URLs directas (.jpg, .png, .webp, etc). El orden se refleja en el carrusel de la página principal.</div>
+              </div>
+
               {/* Text & Content */}
               <div className="bg-panel p-8 rounded-2xl border border-border space-y-6">
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent flex items-center gap-2">
@@ -1972,18 +2061,26 @@ export const AdminDashboard = () => {
                     <div className="flex gap-2">
                       <div
                         className="w-full h-8 rounded border border-border"
-                        style={{ backgroundColor: pageConfig.primaryColor }}
                         aria-label="Color primario"
                         title={pageConfig.primaryColor}
                         tabIndex={0}
-                      ></div>
+                        data-color-preview="primary"
+                      >
+                        <div className="w-full h-full rounded color-preview-primary flex items-center justify-center">
+                          <span className="text-xs text-white/70 select-none">{pageConfig.primaryColor}</span>
+                        </div>
+                      </div>
                       <div
                         className="w-full h-8 rounded border border-border"
-                        style={{ backgroundColor: pageConfig.accentColor }}
                         aria-label="Color acento"
                         title={pageConfig.accentColor}
                         tabIndex={0}
-                      ></div>
+                        data-color-preview="accent"
+                      >
+                        <div className="w-full h-full rounded color-preview-accent flex items-center justify-center">
+                          <span className="text-xs text-black/70 select-none">{pageConfig.accentColor}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
