@@ -936,7 +936,7 @@ export const AdminDashboard = () => {
                     { label: 'Productos Digitales', value: 40, color: 'bg-gold' },
                     { label: 'Servicios de Construcción', value: 60, color: 'bg-text-dim' },
                   ].map((channel, i) => (
-                    <div key={i} className="space-y-3">
+                    <div key={i} className="space-y-3" style={{ '--progress-width': `${channel.value}%` } as React.CSSProperties}>
                       <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
                         <span>{channel.label}</span>
                         <span className="text-accent">{channel.value}%</span>
@@ -944,7 +944,6 @@ export const AdminDashboard = () => {
                       <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
                         <div
                           className={`h-full ${channel.color}`}
-                          style={{ width: `${channel.value}%` }}
                           aria-label={`Progreso ${channel.label}`}
                           title={`Progreso ${channel.label}: ${channel.value}%`}
                           tabIndex={0}
@@ -1760,17 +1759,15 @@ export const AdminDashboard = () => {
                 <div className="pt-4">
                   <div className="p-4 bg-bg rounded-xl border border-border">
                     <p className="text-[10px] text-text-dim uppercase tracking-widest mb-2">Vista Previa de Estilo</p>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" style={{ '--color-primary-preview': pageConfig.primaryColor, '--color-accent-preview': pageConfig.accentColor } as React.CSSProperties}>
                       <div
                         className="w-full h-8 rounded border border-border"
-                        style={{ backgroundColor: pageConfig.primaryColor }}
                         aria-label="Color primario"
                         title={pageConfig.primaryColor}
                         tabIndex={0}
                       ></div>
                       <div
                         className="w-full h-8 rounded border border-border"
-                        style={{ backgroundColor: pageConfig.accentColor }}
                         aria-label="Color acento"
                         title={pageConfig.accentColor}
                         tabIndex={0}
