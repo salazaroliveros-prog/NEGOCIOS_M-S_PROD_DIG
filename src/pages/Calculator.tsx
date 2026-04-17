@@ -5,7 +5,7 @@ import { GUATEMALA_DEPARTMENTS } from '../constants/data';
 import { GuatemalaMap } from '../components/GuatemalaMap';
 import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, addDoc, collection, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 
 export const CalculatorPage = () => {
@@ -87,8 +87,8 @@ export const CalculatorPage = () => {
     if (!user || !receiptUrl) return;
     setIsUploading(true);
     try {
-      await addDoc(collection(db, 'payment_receipts'), {
-        id: `receipt_${Date.now()}`,
+      // 1. Crear el documento y obtener el ID real
+      const docRef = await addDoc(collection(db, 'payment_receipts'), {
         userId: user.uid,
         userName: user.displayName || user.email,
         productId: 'expediente_tecnico',
@@ -102,6 +102,8 @@ export const CalculatorPage = () => {
           totalEstimated: totalCost
         }
       });
+      // 2. Actualizar el campo 'id' con el ID real
+      await updateDoc(docRef, { id: docRef.id });
       alert('Comprobante enviado con éxito. El administrador validará su pago pronto.');
       setShowPurchaseModal(false);
       setReceiptUrl('');
@@ -149,6 +151,7 @@ export const CalculatorPage = () => {
                     const dep = GUATEMALA_DEPARTMENTS.find(d => d.name === e.target.value);
                     if (dep) setDepartment(dep);
                   }}
+                  title="Selecciona el departamento"
                 >
                   {GUATEMALA_DEPARTMENTS.map(dep => (
                     <option key={dep.name} value={dep.name}>{dep.name}</option>
@@ -181,6 +184,8 @@ export const CalculatorPage = () => {
                     value={m2}
                     onChange={(e) => setM2(Number(e.target.value))}
                     className="w-full bg-input border border-border rounded-lg py-4 px-4 text-2xl font-black text-white focus:ring-2 focus:ring-gold outline-none"
+                    title="Área de construcción en metros cuadrados"
+                    placeholder="Ejemplo: 100"
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-dim font-bold">M²</span>
                 </div>
@@ -318,6 +323,7 @@ export const CalculatorPage = () => {
               <button 
                 onClick={() => setShowPurchaseModal(false)}
                 className="text-text-dim hover:text-white transition-colors"
+                title="Cerrar"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -350,6 +356,8 @@ export const CalculatorPage = () => {
                       accept="image/*"
                       onChange={handleFileUpload}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      title="Selecciona el archivo de comprobante"
+                      placeholder="Selecciona archivo"
                     />
                     <div className="border-2 border-dashed border-border group-hover:border-accent/50 rounded-xl p-8 transition-all flex flex-col items-center justify-center gap-3 bg-bg/30">
                       {receiptUrl ? (
@@ -377,6 +385,7 @@ export const CalculatorPage = () => {
 
               <div className="flex gap-3 pt-4">
                 <button 
+                  title="Subir comprobante de pago"
                   onClick={() => setShowPurchaseModal(false)}
                   className="flex-1 px-6 py-4 rounded-xl border border-border text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/5 transition-all"
                 >

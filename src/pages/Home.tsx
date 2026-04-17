@@ -20,7 +20,7 @@ export const Home = () => {
             <div className="w-12 h-12 bg-bg border border-border rounded-xl flex items-center justify-center text-accent">
               <Building2 className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-bold text-white">Construcción Civil</h3>
+            <h3 className="text-xl font-bold text-white">Construcción Residencial, Comercial, Industrial, Civil y Pública</h3>
             <p className="text-text-dim text-sm leading-relaxed">
               Ejecución de proyectos completos con los más altos estándares de calidad y seguridad.
             </p>
@@ -31,7 +31,7 @@ export const Home = () => {
             </div>
             <h3 className="text-xl font-bold text-white">Software Especializado</h3>
             <p className="text-text-dim text-sm leading-relaxed">
-              Apps de cálculo, ERP y herramientas de control diseñadas por ingenieros para ingenieros.
+              Apps de cálculo, ERP y herramientas de control diseñadas por profesionales para ayudarte a llevar el control
             </p>
           </div>
           <div className="space-y-4">

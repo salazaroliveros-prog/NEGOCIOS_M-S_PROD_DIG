@@ -151,7 +151,9 @@ export const ProductsPage = () => {
                 </div>
                 {purchasedIds.includes(product.id) || product.isLite ? (
                   <div className="flex flex-col gap-2">
-                    <button 
+                    <button
+                      title="Ver detalles del producto"
+                      aria-label="Ver detalles del producto"
                       onClick={() => {
                         if (product.isLite) {
                           // Handle Lite version access (e.g., open a demo or download)
@@ -238,7 +240,11 @@ export const ProductsPage = () => {
                   <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Proceso de <span className="text-accent">Adquisición</span></h2>
                   <p className="text-text-dim text-xs uppercase tracking-widest mt-1">{selectedProduct.name}</p>
                 </div>
-                <button onClick={() => setSelectedProduct(null)} className="text-text-dim hover:text-white transition-colors">
+                <button 
+                  onClick={() => setSelectedProduct(null)} 
+                  className="text-text-dim hover:text-white transition-colors"
+                  title="Cerrar detalles"
+                  aria-label="Cerrar detalles"
                   <ExternalLink className="w-6 h-6 rotate-45" />
                 </button>
               </header>
@@ -295,7 +301,9 @@ export const ProductsPage = () => {
                     <div className="relative group rounded-xl overflow-hidden border border-border h-48">
                       <img src={receiptUrl} alt="Receipt Preview" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
-                        <button 
+                        <button
+                          title="Agregar al carrito"
+                          aria-label="Agregar al carrito"
                           onClick={() => setReceiptUrl('')}
                           className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-all"
                         >

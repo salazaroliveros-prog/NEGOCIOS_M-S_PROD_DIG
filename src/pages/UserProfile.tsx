@@ -159,10 +159,6 @@ export const UserProfile = () => {
                     />
                     <button 
                       onClick={async () => {
-                        /* ...existing code... */
-                      }}
-                      title="Guardar avatar personalizado"
-                      aria-label="Guardar avatar personalizado"
                         if (customAvatarUrl) {
                           if (!validateImageUrl(customAvatarUrl)) {
                             alert('Por favor, ingresa una URL de imagen válida (.jpg, .png, .svg, etc.)');
@@ -171,11 +167,13 @@ export const UserProfile = () => {
                           try {
                             await updateDoc(doc(db, 'users', auth.currentUser!.uid), { avatarUrl: customAvatarUrl });
                             setCustomAvatarUrl('');
-                          } catch (error) {
-                            handleFirestoreError(error, OperationType.UPDATE, `users/${auth.currentUser!.uid}`);
+                          } catch (err) {
+                            handleFirestoreError(err, OperationType.UPDATE, `users/${auth.currentUser!.uid}`);
                           }
                         }
                       }}
+                      title="Guardar avatar personalizado"
+                      aria-label="Guardar avatar personalizado"
                       className="bg-accent text-black p-2 rounded hover:bg-accent/90 transition-all"
                     >
                       <Check className="w-4 h-4" />
