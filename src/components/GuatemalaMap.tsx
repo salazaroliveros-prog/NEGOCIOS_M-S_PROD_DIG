@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 
 interface GuatemalaMapProps {
   selectedDepartment: string;
@@ -39,10 +39,10 @@ export const GuatemalaMap: React.FC<GuatemalaMapProps> = ({ selectedDepartment, 
       <svg viewBox="0 0 300 300" className="w-full h-full drop-shadow-2xl">
         <defs>
           <filter id="glow">
-            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
             <feMerge>
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
         </defs>
@@ -52,11 +52,10 @@ export const GuatemalaMap: React.FC<GuatemalaMapProps> = ({ selectedDepartment, 
             d={dep.path}
             onClick={() => onSelect(dep.name)}
             whileHover={{ scale: 1.02, zIndex: 10 }}
-            className={`cursor-pointer transition-all duration-300 stroke-panel stroke-[1.5] ${
-              selectedDepartment === dep.name 
-                ? 'fill-accent filter-[url(#glow)]' 
+            className={`cursor-pointer transition-all duration-300 stroke-panel stroke-[1.5] ${selectedDepartment === dep.name
+                ? 'fill-accent filter-[url(#glow)]'
                 : 'fill-white/10 hover:fill-white/30'
-            }`}
+              }`}
           >
             <title>{dep.name}</title>
           </motion.path>
