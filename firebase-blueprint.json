@@ -1,0 +1,239 @@
+{
+  "entities": {
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "A chat session between a visitor and the admin.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "closed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastMessage": { "type": "string" },
+        "lastMessageAt": { "type": "string", "format": "date-time" },
+        "lastActivity": { "type": "string", "format": "date-time" },
+        "userTyping": { "type": "boolean" },
+        "adminTyping": { "type": "boolean" },
+        "assignedTo": { "type": "string" },
+        "closedReason": { "type": "string" }
+      },
+      "required": ["id", "status", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A message within a chat session.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "text": { "type": "string" },
+        "sender": { "type": "string", "enum": ["user", "admin"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "text", "sender", "timestamp"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "A construction project detail.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "image": { "type": "string" },
+        "link": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "description", "image"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A system user with specific roles.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "editor", "viewer"] },
+        "name": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "purchases": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "A task related to projects or services.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "assignedTo": { "type": "string" },
+        "status": { "type": "string", "enum": ["todo", "in-progress", "done"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "status", "priority", "createdAt"]
+    },
+    "PageConfig": {
+      "title": "PageConfig",
+      "description": "Configuration for page content, colors, and images.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "heroTitle": { "type": "string" },
+        "heroSubtitle": { "type": "string" },
+        "heroImage": { "type": "string" },
+        "accentColor": { "type": "string" },
+        "primaryColor": { "type": "string" },
+        "footerText": { "type": "string" },
+        "contactEmail": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "contactAddress": { "type": "string" },
+        "bankAccountInfo": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id"]
+    },
+    "PaymentReceipt": {
+      "title": "PaymentReceipt",
+      "description": "A payment receipt uploaded by a user for validation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "receiptImageUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "validatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "productId", "receiptImageUrl", "status", "createdAt"]
+    },
+    "DigitalProduct": {
+      "title": "DigitalProduct",
+      "description": "A digital product available for purchase.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string", "enum": ["software", "design", "budget"] },
+        "image": { "type": "string" },
+        "documents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        }
+      },
+      "required": ["id", "name", "price", "category"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "A construction or professional service offered.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" }
+      },
+      "required": ["id", "title", "description"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A notification sent to a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "success", "warning", "error"] },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "message", "type", "read", "createdAt"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "A prospect lead generated from the cost calculator.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "m2": { "type": "number" },
+        "department": { "type": "string" },
+        "workType": { "type": "string" },
+        "estimatedTotal": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "phone", "m2", "department", "workType", "estimatedTotal", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/chats/{chatId}": {
+      "schema": "ChatSession",
+      "description": "Collection of chat sessions."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Subcollection of messages for a specific chat session."
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Collection of projects."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of users."
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Collection of tasks."
+    },
+    "/config/{configId}": {
+      "schema": "PageConfig",
+      "description": "Collection for site-wide configurations."
+    },
+    "/payment_receipts/{receiptId}": {
+      "schema": "PaymentReceipt",
+      "description": "Collection of payment receipts for validation."
+    },
+    "/test/connection": {
+      "schema": "object",
+      "description": "Diagnostic document for testing Firestore connectivity."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Collection of user notifications."
+    },
+    "/products/{productId}": {
+      "schema": "DigitalProduct",
+      "description": "Collection of digital products."
+    },
+    "/services/{serviceId}": {
+      "schema": "Service",
+      "description": "Collection of professional services."
+    },
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Collection of prospect leads."
+    }
+  }
+}
