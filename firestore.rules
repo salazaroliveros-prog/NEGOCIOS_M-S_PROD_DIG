@@ -1,0 +1,204 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: chats
+// Document ID: {chatId}
+// Fields:
+//   - id: string (required)
+//   - userName: string (optional)
+//   - status: string (required, enum: ['active', 'closed'])
+//   - createdAt: timestamp (required)
+//   - lastMessage: string (optional)
+//   - lastMessageAt: timestamp (optional)
+//
+// Collection: chats/{chatId}/messages
+// Document ID: {messageId}
+// Fields:
+//   - id: string (required)
+//   - text: string (required, max 1000 chars)
+//   - sender: string (required, enum: ['user', 'admin'])
+//   - timestamp: timestamp (required)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+             (request.auth.token.email == "salazaroliveros@gmail.com" || 
+              (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    function isEditor() {
+      return isAdmin() || (isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'editor']);
+    }
+
+    function isViewer() {
+      return isEditor() || (isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'editor', 'viewer']);
+    }
+
+    function isValidChat(data) {
+      return data.keys().hasAll(['id', 'status', 'createdAt']) &&
+             data.id is string &&
+             data.status in ['active', 'closed'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['id', 'text', 'sender', 'timestamp']) &&
+             data.id is string &&
+             data.text is string && data.text.size() <= 1000 &&
+             data.sender in ['user', 'admin'] &&
+             data.timestamp is timestamp;
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'image']) &&
+             data.id is string &&
+             data.title is string && data.title.size() <= 100 &&
+             data.description is string && data.description.size() <= 1000 &&
+             data.image is string;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['id', 'title', 'status', 'priority', 'createdAt']) &&
+             data.id is string &&
+             data.title is string && data.title.size() <= 100 &&
+             data.status in ['todo', 'in-progress', 'done'] &&
+             data.priority in ['low', 'medium', 'high'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidConfig(data) {
+      return data.keys().size() > 0;
+    }
+
+    function isValidPaymentReceipt(data) {
+      return data.keys().hasAll(['id', 'userId', 'productId', 'status', 'createdAt']) &&
+             data.id is string &&
+             data.userId is string &&
+             data.productId is string &&
+             data.status in ['pending', 'approved', 'rejected'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'message', 'type', 'read', 'createdAt']) &&
+             data.id is string &&
+             data.userId is string &&
+             data.title is string && data.title.size() <= 100 &&
+             data.message is string && data.message.size() <= 1000 &&
+             data.type in ['info', 'success', 'warning', 'error'] &&
+             data.read is bool &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidLead(data) {
+      return data.keys().hasAll(['name', 'phone', 'm2', 'department', 'workType', 'estimatedTotal', 'createdAt']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.m2 is number &&
+             data.department is string &&
+             data.workType is string &&
+             data.estimatedTotal is number &&
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /chats/{chatId} {
+      allow create: if isValidChat(request.resource.data);
+      allow read, update: if true; // Allow visitors to read/update their own chats (scoped by chatId in app)
+      allow delete: if isEditor();
+
+      match /messages/{messageId} {
+        allow create: if isValidMessage(request.resource.data);
+        allow read: if true; // Allow visitors to read their own messages
+        allow update: if isEditor();
+      }
+    }
+
+    match /projects/{projectId} {
+      allow read: if true;
+      allow create, update: if isEditor() && isValidProject(request.resource.data);
+      allow delete: if isEditor();
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isViewer();
+      allow create, update: if isEditor() && isValidTask(request.resource.data);
+      allow delete: if isEditor();
+    }
+
+    match /users/{userId} {
+      allow read: if (isAuthenticated() && request.auth.uid == userId) || isViewer() || isAdmin();
+      allow create: if (isAuthenticated() && request.auth.uid == userId && (request.resource.data.role == 'viewer' || request.auth.token.email == "salazaroliveros@gmail.com")) || isAdmin();
+      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == userId && request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+
+    match /config/{configId} {
+      allow read: if true;
+      allow create, update: if isEditor() && isValidConfig(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /payment_receipts/{receiptId} {
+      allow read: if isAdmin() || (isAuthenticated() && (resource == null || resource.data.userId == request.auth.uid));
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidPaymentReceipt(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAdmin() && isValidNotification(request.resource.data);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /services/{serviceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /leads/{leadId} {
+      allow read: if isAdmin();
+      allow create: if isValidLead(request.resource.data);
+      allow update: if isAdmin() && isValidLead(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
